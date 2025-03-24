@@ -232,6 +232,36 @@ public class NoBuild {
   }
 
   /**
+   * Runs a Java class
+   *
+   * @param additionalClassPaths Additional class paths to pass to the compiler
+   * @param javaArguments Arguments to pass to the java binary
+   * @param mainClass The fully qualified class name, e.g. {@code com.example.MyClass$MySubClass}
+   * @param args Arguments to pass to the main method
+   * @return Exit status code
+   */
+  public static int runJava(
+      String[] additionalClassPaths, String[] javaArguments, String mainClass, String... args) {
+    String pathSeparator = System.getProperty("path.separator");
+
+    String classPaths =
+        String.join(
+            pathSeparator,
+            Stream.concat(Stream.of(javaClassPath), Arrays.stream(additionalClassPaths))
+                .toArray(String[]::new));
+
+    Stream<String> commandLineStream =
+        Stream.of(
+                Stream.of(javaBin.toString(), "-cp", classPaths),
+                Arrays.stream(javaArguments),
+                Stream.of(mainClass),
+                Arrays.stream(args))
+            .flatMap(it -> it);
+
+    return command(commandLineStream.toArray(String[]::new));
+  }
+
+  /**
    * Compiles java sources
    *
    * @return {@code true} if all the sources compiled successfully

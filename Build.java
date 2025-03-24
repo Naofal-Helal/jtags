@@ -1,6 +1,8 @@
 import static nobuild.NoBuild.*;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class Build {
   static final String program = "jtags";
@@ -18,7 +20,12 @@ public class Build {
       compileJava(classPaths, sourcePaths);
     }
 
-    runJava(classPaths, mainClass, args);
+    var argumentPartitions =
+        Arrays.stream(args).collect(Collectors.partitioningBy(it -> it.startsWith("-D")));
+    String[] javaArguments = argumentPartitions.get(true).toArray(String[]::new);
+    String[] programArguments = argumentPartitions.get(false).toArray(String[]::new);
+
+    runJava(classPaths, javaArguments, mainClass, programArguments);
   }
 
   private static void ensureDependencies() {
