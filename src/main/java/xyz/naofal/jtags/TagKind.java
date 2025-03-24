@@ -3,6 +3,7 @@ package xyz.naofal.jtags;
 public enum TagKind {
   PACKAGE,
   CLASS,
+  RECORD,
   INTERFACE,
   ANNOTATION,
   ENUM,

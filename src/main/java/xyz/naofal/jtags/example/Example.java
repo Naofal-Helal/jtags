@@ -1,11 +1,21 @@
 package xyz.naofal.jtags.example;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+@interface T {
+  static int t = 1;
+}
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface Example {}
-//
+public class Example {
+
+  public static void lorem(
+      String string1,
+      String string2,
+      String string3,
+      String string4,
+      String string5,
+      String string6) {}
+
+  enum T {
+    A;
+    int a;
+  }
+}

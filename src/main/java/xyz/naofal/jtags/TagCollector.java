@@ -28,7 +28,7 @@ public class TagCollector {
       TreeVisitorContext context = new TreeVisitorContext(Trees.instance(task));
       TreeVisitor treeVisitor = new TreeVisitor();
       for (CompilationUnitTree compilationUnitTree : trees) {
-        compilationUnitTree.accept(treeVisitor, context);
+        treeVisitor.scan(compilationUnitTree, context);
       }
 
     } catch (IOException ex) {

@@ -5,6 +5,7 @@
 /jdtls-build
 
 .env*
+/tags
 
 /third-party/downloads/*
 /third-party/**/*.jar

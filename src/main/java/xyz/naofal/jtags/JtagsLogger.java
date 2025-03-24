@@ -46,14 +46,14 @@ public class JtagsLogger {
     @Override
     public void publish(LogRecord record) {
       if (record.getMessage() != null && !record.getMessage().isEmpty()) {
-        // if (System.console().isTerminal()) {
-        int color = colors.get(record.getLevel());
-        System.err.printf(
-            "\u001b[38;5;%dm[%s]\u001b[0m %s%n",
-            color, record.getLevel().getName(), record.getMessage());
-        // } else {
-        //   System.err.printf("[%s] %s%n", record.getLevel().getName(), record.getMessage());
-        // }
+        if (System.console().isTerminal()) {
+          int color = colors.get(record.getLevel());
+          System.err.printf(
+              "\u001b[38;5;%dm[%s]\u001b[0m %s%n",
+              color, record.getLevel().getName(), record.getMessage());
+        } else {
+          System.err.printf("[%s] %s%n", record.getLevel().getName(), record.getMessage());
+        }
       }
       if (record.getThrown() != null) {
         System.err.println(record.getThrown().toString().indent(4));
