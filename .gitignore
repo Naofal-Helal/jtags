@@ -1,0 +1,13 @@
+/build
+/package
+/out
+/bin
+/jdtls-build
+
+.env*
+
+/third-party/downloads/*
+/third-party/**/*.jar
+
+/*.jar
+/docs

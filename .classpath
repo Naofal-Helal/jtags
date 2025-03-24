@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+    <attributes>
+      <attribute name="module" value="false" />
+    </attributes>
+  </classpathentry>
+  <!-- Output directory -->
+  <classpathentry kind="output" path="jdtls-build" />
+  <!-- Soruces -->
+  <classpathentry kind="src" path="src/main/java" />
+  <classpathentry excluding="src/" including="nobuild/**.java|Build.java" kind="src"
+    path="" />
+  <!-- Libraries -->
+  <classpathentry kind="lib" path="third-party/jars/h2.jar" />
+</classpath>
