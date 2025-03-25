@@ -2,8 +2,8 @@ package xyz.naofal.jtags;
 
 import static xyz.naofal.jtags.JtagsLogger.logger;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.PriorityQueue;
@@ -12,9 +12,11 @@ import xyz.naofal.jtags.Jtags.Options;
 public record TagsWriter(Options options) {
   private static final int MAX_PATTERN_LENGTH = 96;
 
-  public void writeTagsFile(PriorityQueue<Tag> tags, OutputStream outputStream) {
-    var writer = new OutputStreamWriter(outputStream);
-    try {
+  public boolean writeTagsFile(PriorityQueue<Tag> tags) {
+
+    try (var outputStream = new FileOutputStream(options().output.toFile());
+        var writer = new OutputStreamWriter(outputStream); ) {
+
       writer.write(
           """
           !_TAG_FILE_ENCODING\tutf-8\t
@@ -29,7 +31,10 @@ public record TagsWriter(Options options) {
       writer.flush();
     } catch (IOException ex) {
       logger.severe(ex.toString());
+      return false;
     }
+
+    return true;
   }
 
   private void writeTag(Writer writer, Tag tag) throws IOException {

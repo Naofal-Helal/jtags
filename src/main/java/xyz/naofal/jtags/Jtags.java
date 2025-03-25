@@ -2,8 +2,8 @@ package xyz.naofal.jtags;
 
 import static xyz.naofal.jtags.JtagsLogger.logger;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,6 +13,7 @@ public class Jtags {
   static class Options {
     List<String> sources = new ArrayList<>();
     boolean absolutePaths = false;
+    Path output = Paths.get("tags");
   }
 
   public static void main(String[] args) {
@@ -27,9 +28,28 @@ public class Jtags {
     String argument;
     while ((argument = arguments.poll()) != null) {
       switch (argument) {
+        case "-h", "help", "-help", "--help":
+          printUsage();
+          System.exit(0);
+          break;
+
         case "-absolute":
           logger.config("Using absolute paths");
           options.absolutePaths = true;
+          break;
+
+        case "-o", "-output":
+          options.output =
+              switch (arguments.poll()) {
+                case null -> {
+                  logger.severe("Expected argument after " + argument);
+                  printUsage();
+                  System.exit(1);
+                  yield null;
+                }
+                case String output -> Paths.get(output);
+              };
+          logger.config("Writing tags to " + options.output.toString());
           break;
 
         default:
@@ -45,14 +65,7 @@ public class Jtags {
     var tags = TagCollector.collectTags(options);
 
     var tagsWriter = new TagsWriter(options);
-    try {
-      tagsWriter.writeTagsFile(tags, new FileOutputStream("tags"));
-    } catch (FileNotFoundException ex) {
-      logger.severe(ex.toString());
-      return false;
-    }
-
-    return true;
+    return tagsWriter.writeTagsFile(tags);
   }
 
   static void printUsage() {
@@ -60,7 +73,9 @@ public class Jtags {
         """
         Usage: jtags [options] <sources...>
         Options:
-          -absolute   Use absolute paths for tag locations
+          -absolute           Use absolute paths for tag locations
+          -o, -output <file>  Write tags to specified <file>
+          -h, -help           Show this message
         """);
   }
 }
