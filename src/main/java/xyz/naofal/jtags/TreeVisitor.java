@@ -12,9 +12,15 @@ import com.sun.source.util.TreePathScanner;
 import java.util.List;
 import java.util.PriorityQueue;
 import javax.lang.model.element.Modifier;
+import xyz.naofal.jtags.Jtags.Options;
 
 public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
+  public final Options options;
   public final PriorityQueue<Tag> tags = new PriorityQueue<>();
+
+  public TreeVisitor(Options options) {
+    this.options = options;
+  }
 
   @Override
   public Void visitCompilationUnit(CompilationUnitTree node, TreeVisitorContext p) {
@@ -22,7 +28,7 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
     logger.fine(() -> "Collecting tags in file: " + p.getLocation());
 
-    return super.visitCompilationUnit(node, p);
+    return scan(node.getTypeDecls(), p);
   }
 
   @Override
@@ -40,6 +46,17 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
   @Override
   public Void visitClass(ClassTree node, TreeVisitorContext p) {
+    if (options.excludeAnonymous && node.getSimpleName().isEmpty()) {
+      return null;
+    }
+    if (options.excludeNonPublic && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)) {
+      return null;
+    }
+
+    if (node.getSimpleName().isEmpty()) {
+      return scan(node.getMembers(), p);
+    }
+
     Tag tag =
         new Tag(
             switch (node.getKind()) {
@@ -62,11 +79,15 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
     tags.add(tag);
 
-    return super.visitClass(node, p);
+    return scan(node.getMembers(), p);
   }
 
   @Override
   public Void visitMethod(MethodTree node, TreeVisitorContext p) {
+    if (options.excludeNonPublic && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)) {
+      return null;
+    }
+
     Tag tag =
         new Tag(
             switch (node.getKind()) {
@@ -89,15 +110,19 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
     tags.add(tag);
 
-    return super.visitMethod(node, p);
+    return scan(node.getBody(), p);
   }
 
   @Override
   public Void visitVariable(VariableTree node, TreeVisitorContext p) {
+    if (options.excludeNonPublic && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)) {
+      return null;
+    }
+
     Tree parent = getCurrentPath().getParentPath().getLeaf();
 
     if (!(parent instanceof ClassTree enclosingType)) {
-      return null;
+      return scan(node.getInitializer(), p);
     }
 
     Tag tag =
@@ -117,6 +142,6 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
     tags.add(tag);
 
-    return null;
+    return scan(node.getInitializer(), p);
   }
 }

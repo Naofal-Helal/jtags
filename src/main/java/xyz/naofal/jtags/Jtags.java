@@ -3,7 +3,6 @@ package xyz.naofal.jtags;
 import static xyz.naofal.jtags.JtagsLogger.logger;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,8 +11,11 @@ import java.util.List;
 public class Jtags {
   static class Options {
     List<String> sources = new ArrayList<>();
+    Path output = Path.of("tags");
     boolean absolutePaths = false;
-    Path output = Paths.get("tags");
+    boolean excludeNonPublic = false;
+    boolean excludeAnonymous = false;
+    boolean excludeStaticField = false;
   }
 
   public static void main(String[] args) {
@@ -38,6 +40,29 @@ public class Jtags {
           options.absolutePaths = true;
           break;
 
+        case "-no-static":
+          logger.config("Excluding 'file:' field in tags");
+          options.excludeStaticField = true;
+          break;
+
+        case "-no-non-public":
+          logger.config("Excluding non-public elements");
+          options.excludeNonPublic = true;
+          break;
+
+        case "-no-anonymous":
+          logger.config("Excluding anonymous classes");
+          options.excludeAnonymous = true;
+          break;
+
+        case "-lib":
+          logger.config("Third-party library mode");
+          options.absolutePaths = true;
+          options.excludeStaticField = true;
+          options.excludeNonPublic = true;
+          options.excludeAnonymous = true;
+          break;
+
         case "-o", "-output":
           options.output =
               switch (arguments.poll()) {
@@ -47,7 +72,7 @@ public class Jtags {
                   System.exit(1);
                   yield null;
                 }
-                case String output -> Paths.get(output);
+                case String output -> Path.of(output);
               };
           logger.config("Writing tags to " + options.output.toString());
           break;
@@ -73,8 +98,13 @@ public class Jtags {
         """
         Usage: jtags [options] <sources...>
         Options:
-          -absolute           Use absolute paths for tag locations
           -o, -output <file>  Write tags to specified <file>
+          -lib                Treat sources as third-party libraries
+                              (alias for -absolute -no-non-public -no-anonymous)
+          -absolute           Use absolute paths for tag locations
+          -no-static          Exclude the "file:" field from tags
+          -no-anonymous       Exclude anonymous classes
+          -no-anonymous       Exclude anonymous classes
           -h, -help           Show this message
         """);
   }

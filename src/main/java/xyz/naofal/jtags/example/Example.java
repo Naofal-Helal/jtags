@@ -12,10 +12,18 @@ public class Example {
       String string3,
       String string4,
       String string5,
-      String string6) {}
+      String string6) {
 
-  enum T {
-    A;
-    int a;
+    Object o =
+        new Object() {
+          void f() {}
+          ;
+        };
+
+    class T {
+      void f() {}
+
+      private void fp() {}
+    }
   }
 }

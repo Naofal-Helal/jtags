@@ -27,7 +27,7 @@ public class TagCollector {
           (JavacTask) compiler.getTask(null, fileManager, null, null, null, compilationUnits);
       Iterable<? extends CompilationUnitTree> trees = task.parse();
       TreeVisitorContext context = new TreeVisitorContext(Trees.instance(task));
-      TreeVisitor treeVisitor = new TreeVisitor();
+      TreeVisitor treeVisitor = new TreeVisitor(options);
       for (CompilationUnitTree compilationUnitTree : trees) {
         treeVisitor.scan(compilationUnitTree, context);
       }

@@ -11,7 +11,6 @@ import com.sun.source.util.SourcePositions;
 import com.sun.source.util.Trees;
 import java.io.BufferedReader;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Optional;
 
 public class TreeVisitorContext {
@@ -26,9 +25,7 @@ public class TreeVisitorContext {
 
   public Path getLocation() {
     assert compilationUnitTree != null;
-    return Paths.get(".")
-        .toAbsolutePath()
-        .relativize(Paths.get(compilationUnitTree.getSourceFile().toUri()).toAbsolutePath());
+    return Path.of(compilationUnitTree.getSourceFile().toUri()).toAbsolutePath();
   }
 
   public String getLine(Tree node) {

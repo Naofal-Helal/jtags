@@ -1,6 +1,7 @@
 package xyz.naofal.jtags;
 
 import java.nio.file.Path;
+import java.util.Comparator;
 
 public record Tag(TagKind kind, String name, Path location, String line, boolean isStatic)
     implements Comparable<Tag> {
@@ -11,6 +12,9 @@ public record Tag(TagKind kind, String name, Path location, String line, boolean
 
   @Override
   public int compareTo(Tag o) {
-    return String.CASE_INSENSITIVE_ORDER.compare(name, o.name());
+    return Comparator.comparing(Tag::name, String.CASE_INSENSITIVE_ORDER)
+        .thenComparing(Tag::location)
+        .thenComparing(Tag::kind)
+        .compare(this, o);
   }
 }
