@@ -43,7 +43,9 @@ import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -137,10 +139,30 @@ public class NoBuild {
       System.err.flush();
     }
 
+    public static Map<Level, Integer> colors =
+        new HashMap<Level, Integer>() {
+          {
+            put(Level.FINEST, 5);
+            put(Level.FINE, 4);
+            put(Level.FINER, 6);
+            put(Level.CONFIG, 4);
+            put(Level.INFO, 2);
+            put(Level.WARNING, 3);
+            put(Level.SEVERE, 1);
+          }
+        };
+
     @Override
     public void publish(LogRecord record) {
       if (record.getMessage() != null && !record.getMessage().isEmpty()) {
-        System.err.printf("[%s] %s%n", record.getLevel().getName(), record.getMessage());
+        if (System.console().isTerminal()) {
+          int color = colors.get(record.getLevel());
+          System.err.printf(
+              "\u001b[38;5;%dm[%s]\u001b[0m %s%n",
+              color, record.getLevel().getName(), record.getMessage());
+        } else {
+          System.err.printf("[%s] %s%n", record.getLevel().getName(), record.getMessage());
+        }
       }
       if (record.getThrown() != null) {
         System.err.println(indent(record.getThrown().toString(), 4));
