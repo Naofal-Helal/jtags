@@ -343,6 +343,7 @@ public class NoBuild {
   public static int commandThrows(String... command) throws IOException {
     ProcessBuilder pb =
         new ProcessBuilder(command)
+            .redirectInput(Redirect.INHERIT)
             .redirectOutput(Redirect.INHERIT)
             .redirectError(Redirect.INHERIT);
     Process process;
