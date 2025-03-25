@@ -12,7 +12,7 @@ public record Tag(TagKind kind, String name, Path location, String line, boolean
 
   @Override
   public int compareTo(Tag o) {
-    return Comparator.comparing(Tag::name, String.CASE_INSENSITIVE_ORDER)
+    return Comparator.<Tag, String>comparing(it -> it.name.toUpperCase())
         .thenComparing(Tag::location)
         .thenComparing(Tag::kind)
         .compare(this, o);
