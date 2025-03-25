@@ -76,7 +76,11 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
                 yield TagKind.METHOD;
               }
             },
-            node.getName().toString(),
+            node.getReturnType() != null
+                ? node.getName().toString()
+                : ((ClassTree) getCurrentPath().getParentPath().getLeaf())
+                    .getSimpleName()
+                    .toString(),
             p.getLocation(),
             p.getLine(node),
             node.getModifiers().getFlags().contains(Modifier.STATIC));
