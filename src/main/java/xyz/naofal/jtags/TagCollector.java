@@ -6,6 +6,7 @@ import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
 import com.sun.source.util.Trees;
 import java.io.IOException;
+import java.util.PriorityQueue;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -16,7 +17,7 @@ public class TagCollector {
 
   static JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 
-  public static boolean run(Options options) {
+  public static PriorityQueue<Tag> collectTags(Options options) {
     try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null)) {
 
       Iterable<? extends JavaFileObject> compilationUnits =
@@ -30,11 +31,12 @@ public class TagCollector {
       for (CompilationUnitTree compilationUnitTree : trees) {
         treeVisitor.scan(compilationUnitTree, context);
       }
+      return treeVisitor.tags;
 
     } catch (IOException ex) {
       logger.severe(ex.toString());
+      System.exit(1);
+      return null;
     }
-
-    return true;
   }
 }

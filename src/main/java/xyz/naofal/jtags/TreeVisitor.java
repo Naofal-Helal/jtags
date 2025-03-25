@@ -14,7 +14,7 @@ import java.util.PriorityQueue;
 import javax.lang.model.element.Modifier;
 
 public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
-  public PriorityQueue<Tag> tags = new PriorityQueue<>();
+  public final PriorityQueue<Tag> tags = new PriorityQueue<>();
 
   @Override
   public Void visitCompilationUnit(CompilationUnitTree node, TreeVisitorContext p) {
@@ -55,7 +55,8 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
             },
             node.getSimpleName().toString(),
             p.getLocation(),
-            p.getLine(node));
+            p.getLine(node),
+            node.getModifiers().getFlags().contains(Modifier.STATIC));
 
     logger.finer(() -> "Type: " + tag);
 
@@ -66,7 +67,19 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
   @Override
   public Void visitMethod(MethodTree node, TreeVisitorContext p) {
-    Tag tag = new Tag(TagKind.METHOD, node.getName().toString(), p.getLocation(), p.getLine(node));
+    Tag tag =
+        new Tag(
+            switch (node.getKind()) {
+              case METHOD -> TagKind.METHOD;
+              default -> {
+                logger.warning("Unknown method kind " + node.getKind());
+                yield TagKind.METHOD;
+              }
+            },
+            node.getName().toString(),
+            p.getLocation(),
+            p.getLine(node),
+            node.getModifiers().getFlags().contains(Modifier.STATIC));
     logger.finer(() -> "Method: " + tag);
     tags.add(tag);
 
@@ -91,7 +104,8 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
                 : TagKind.FIELD,
             node.getName().toString(),
             p.getLocation(),
-            p.getLine(node));
+            p.getLine(node),
+            node.getModifiers().getFlags().contains(Modifier.STATIC));
     logger.finer(() -> "Variable: " + tag);
     tags.add(tag);
 

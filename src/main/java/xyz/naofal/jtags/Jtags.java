@@ -1,5 +1,9 @@
 package xyz.naofal.jtags;
 
+import static xyz.naofal.jtags.JtagsLogger.logger;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 
@@ -23,7 +27,16 @@ public class Jtags {
   }
 
   static boolean run(Options options) {
-    return TagCollector.run(options);
+    var tags = TagCollector.collectTags(options);
+
+    try {
+      TagsWriter.writeTagsFile(tags, new FileOutputStream("tags"));
+    } catch (FileNotFoundException ex) {
+      logger.severe(ex.toString());
+      return false;
+    }
+
+    return true;
   }
 
   static void printUsage() {
