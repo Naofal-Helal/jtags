@@ -2,7 +2,10 @@ import static nobuild.NoBuild.*;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class Build {
   static final String program = "jtags";
@@ -29,7 +32,14 @@ public class Build {
 
       case "run":
         buildJtags(mainClass, sourcePaths, classPaths);
-        runJava(classPaths, mainClass, arguments.toArray(String[]::new));
+
+        Map<Boolean, List<String>> argPartition =
+            arguments.stream().collect(Collectors.partitioningBy(it -> it.startsWith("-D")));
+        runJava(
+            classPaths,
+            argPartition.get(true).toArray(String[]::new),
+            mainClass,
+            argPartition.get(false).toArray(String[]::new));
         break;
 
       case "package":

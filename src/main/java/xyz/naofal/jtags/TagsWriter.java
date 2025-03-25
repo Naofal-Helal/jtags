@@ -7,11 +7,12 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.PriorityQueue;
+import xyz.naofal.jtags.Jtags.Options;
 
-public class TagsWriter {
+public record TagsWriter(Options options) {
   private static final int MAX_PATTERN_LENGTH = 96;
 
-  public static void writeTagsFile(PriorityQueue<Tag> tags, OutputStream outputStream) {
+  public void writeTagsFile(PriorityQueue<Tag> tags, OutputStream outputStream) {
     var writer = new OutputStreamWriter(outputStream);
     try {
       writer.write(
@@ -31,10 +32,13 @@ public class TagsWriter {
     }
   }
 
-  private static void writeTag(Writer writer, Tag tag) throws IOException {
+  private void writeTag(Writer writer, Tag tag) throws IOException {
     writer.write(tag.name());
     writer.write('\t');
-    writer.write(tag.location());
+    writer.write(
+        options().absolutePaths
+            ? tag.location().toAbsolutePath().toString()
+            : tag.location().toString());
     writer.write("\t/^");
     writer.write(tag.line().substring(0, Math.min(tag.line().length(), MAX_PATTERN_LENGTH)));
     writer.write("$/;\"\t");

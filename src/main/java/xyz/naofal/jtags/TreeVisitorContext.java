@@ -10,6 +10,7 @@ import com.sun.source.tree.Tree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.Trees;
 import java.io.BufferedReader;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
@@ -23,12 +24,11 @@ public class TreeVisitorContext {
     sourcePositions = trees.getSourcePositions();
   }
 
-  public String getLocation() {
+  public Path getLocation() {
     assert compilationUnitTree != null;
     return Paths.get(".")
         .toAbsolutePath()
-        .relativize(Paths.get(compilationUnitTree.getSourceFile().toUri()).toAbsolutePath())
-        .toString();
+        .relativize(Paths.get(compilationUnitTree.getSourceFile().toUri()).toAbsolutePath());
   }
 
   public String getLine(Tree node) {

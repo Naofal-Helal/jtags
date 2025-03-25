@@ -1,9 +1,11 @@
 package xyz.naofal.jtags;
 
-public record Tag(TagKind kind, String name, String location, String line, boolean isStatic)
+import java.nio.file.Path;
+
+public record Tag(TagKind kind, String name, Path location, String line, boolean isStatic)
     implements Comparable<Tag> {
 
-  public Tag(TagKind kind, String name, String location, String line) {
+  public Tag(TagKind kind, String name, Path location, String line) {
     this(kind, name, location, line, false);
   }
 

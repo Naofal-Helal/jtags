@@ -37,6 +37,7 @@ public class JtagsLogger {
             put(Level.FINEST, 5);
             put(Level.FINE, 4);
             put(Level.FINER, 6);
+            put(Level.CONFIG, 4);
             put(Level.INFO, 2);
             put(Level.WARNING, 3);
             put(Level.SEVERE, 1);

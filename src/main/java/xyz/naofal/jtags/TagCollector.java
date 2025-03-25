@@ -21,7 +21,7 @@ public class TagCollector {
     try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null)) {
 
       Iterable<? extends JavaFileObject> compilationUnits =
-          fileManager.getJavaFileObjects(options.sources);
+          fileManager.getJavaFileObjects(options.sources.toArray(String[]::new));
 
       JavacTask task =
           (JavacTask) compiler.getTask(null, fileManager, null, null, null, compilationUnits);

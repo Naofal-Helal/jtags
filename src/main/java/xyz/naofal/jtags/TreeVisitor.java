@@ -84,7 +84,9 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
             p.getLocation(),
             p.getLine(node),
             node.getModifiers().getFlags().contains(Modifier.STATIC));
+
     logger.finer(() -> "Method: " + tag);
+
     tags.add(tag);
 
     return super.visitMethod(node, p);
@@ -110,7 +112,9 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
             p.getLocation(),
             p.getLine(node),
             node.getModifiers().getFlags().contains(Modifier.STATIC));
+
     logger.finer(() -> "Variable: " + tag);
+
     tags.add(tag);
 
     return null;
