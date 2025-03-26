@@ -11,7 +11,7 @@ import java.util.List;
 public class Jtags {
   static class Options {
     List<String> sources = new ArrayList<>();
-    Path output = Path.of("tags");
+    Path output = Path.of(".", "tags");
     boolean absolutePaths = false;
     boolean excludeNonPublic = false;
     boolean excludeAnonymous = false;
@@ -91,7 +91,6 @@ public class Jtags {
 
         case "-lib":
           logger.config("Third-party library mode");
-          options.absolutePaths = true;
           options.excludeNonPublic = true;
           options.excludeAnonymous = true;
           break;
@@ -139,7 +138,7 @@ Usage: jtags [options] <sources...>
 Options:
   -o, -output <file>  Write tags to specified <file>
   -lib                Treat sources as third-party libraries
-                      (alias for -absolute -no-non-public -no-anonymous)
+                      (alias for -no-non-public -no-anonymous)
   -no-anonymous       Exclude anonymous classes
   -no-non-public      Exclude non-public elements
   -absolute           Use absolute paths for tag locations

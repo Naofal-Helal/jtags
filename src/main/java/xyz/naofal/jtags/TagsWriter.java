@@ -9,7 +9,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.nio.file.Path;
 import java.util.PriorityQueue;
 import xyz.naofal.jtags.Jtags.Options;
 
@@ -47,7 +46,7 @@ public record TagsWriter(Options options) {
     writer.write(
         options().absolutePaths
             ? tag.location().toString()
-            : Path.of(".").toAbsolutePath().relativize(tag.location()).toString());
+            : options.output.getParent().toAbsolutePath().relativize(tag.location()).toString());
     writer.write("\t/^");
     writer.write(tag.line().substring(0, Math.min(tag.line().length(), MAX_PATTERN_LENGTH)));
     writer.write("$/;\"\t");

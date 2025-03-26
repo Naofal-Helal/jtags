@@ -56,9 +56,13 @@ public class Build {
   }
 
   static void buildJtags(String mainClass, String[] sourcePaths, String[] classPaths) {
-    if (classNeedsRebuild(mainClass, sourcePaths)) {
-      logger.info("Compiling %s...".formatted(program));
-      compileJava(classPaths, sourcePaths);
+    if (!classNeedsRebuild(mainClass, sourcePaths)) {
+      return;
+    }
+
+    logger.info("Compiling %s...".formatted(program));
+    if (!compileJava(classPaths, sourcePaths)) {
+      System.exit(1);
     }
   }
 

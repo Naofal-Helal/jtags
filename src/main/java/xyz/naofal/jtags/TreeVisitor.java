@@ -104,7 +104,11 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
   @Override
   public Void visitMethod(MethodTree node, TreeVisitorContext p) {
-    if (options.excludeNonPublic && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)) {
+    ClassTree enclosingType = (ClassTree)getCurrentPath().getParentPath().getLeaf();
+
+    if (options.excludeNonPublic
+        && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)
+        && enclosingType.getKind() != Tree.Kind.INTERFACE) {
       return null;
     }
 
@@ -116,14 +120,9 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
     }
 
     if (options.fields.contains(TagField.EnclosingType.class)) {
-      for (var path : getCurrentPath().getParentPath()) {
-        if (path instanceof ClassTree classTree) {
-          fields.add(
-              new TagField.EnclosingType(
-                  classTree.getSimpleName().toString(), getTypeKind(classTree)));
-          break;
-        }
-      }
+      fields.add(
+          new TagField.EnclosingType(
+              enclosingType.getSimpleName().toString(), getTypeKind(enclosingType)));
     }
 
     Tag tag =
