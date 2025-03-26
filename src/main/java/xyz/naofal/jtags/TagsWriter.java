@@ -1,6 +1,9 @@
 package xyz.naofal.jtags;
 
 import static xyz.naofal.jtags.JtagsLogger.logger;
+import static xyz.naofal.jtags.TagField.EnclosingType;
+import static xyz.naofal.jtags.TagField.Package;
+import static xyz.naofal.jtags.TagField.StaticTag;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -60,8 +63,16 @@ public record TagsWriter(Options options) {
           case ENUM_CONSTANT -> 'e';
           case METHOD -> 'm';
         });
-    if (!options().excludeStaticField && tag.isStatic()) {
-      writer.write("\tfile:");
+
+    for (TagField field : tag.fields()) {
+      writer.write('\t');
+      writer.write(
+          switch (field) {
+            case StaticTag() -> "file:";
+            case Package(var p) -> "package:" + p;
+            case EnclosingType(var t, var k) ->
+                k.name().toLowerCase() + ":" + (t.isEmpty() ? "(Anonymous)" : t);
+          });
     }
 
     writer.write('\n');

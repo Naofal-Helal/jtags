@@ -324,6 +324,7 @@ public class NoBuild {
           fileManager.getJavaFileObjects(sourcePaths);
 
       List<String> compilerOptions = new ArrayList<>();
+      compilerOptions.add("-Xlint:all");
       compilerOptions.add("-d");
       compilerOptions.add(classOutputPath);
 

@@ -9,7 +9,9 @@ import com.sun.source.tree.PackageTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.TreePathScanner;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import javax.lang.model.element.Modifier;
 import xyz.naofal.jtags.Jtags.Options;
@@ -46,10 +48,11 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
   @Override
   public Void visitClass(ClassTree node, TreeVisitorContext p) {
-    if (options.excludeAnonymous && node.getSimpleName().isEmpty()) {
+    if (options.excludeNonPublic && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)) {
       return null;
     }
-    if (options.excludeNonPublic && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)) {
+
+    if (options.excludeAnonymous && node.getSimpleName().isEmpty()) {
       return null;
     }
 
@@ -57,23 +60,40 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
       return scan(node.getMembers(), p);
     }
 
+    TagKind typeKind = getTypeKind(node);
+
+    List<TagField> fields = new ArrayList<>();
+
+    if (options.fields.contains(TagField.StaticTag.class)
+        && node.getModifiers().getFlags().contains(Modifier.STATIC)) {
+      fields.add(new TagField.StaticTag());
+    }
+
+    if (options.fields.contains(TagField.Package.class)) {
+      for (var path : getCurrentPath().getParentPath()) {
+        if (path instanceof CompilationUnitTree compilationUnitTree) {
+          fields.add(
+              new TagField.Package(
+                  Optional.ofNullable(compilationUnitTree.getPackageName())
+                      .map(String::valueOf)
+                      .orElse("")));
+          break;
+        }
+      }
+    }
+
+    if (options.fields.contains(TagField.EnclosingType.class)) {
+      for (var path : getCurrentPath().getParentPath()) {
+        if (path instanceof ClassTree classTree) {
+          fields.add(new TagField.EnclosingType(classTree.getSimpleName().toString(), typeKind));
+          break;
+        }
+      }
+    }
+
     Tag tag =
         new Tag(
-            switch (node.getKind()) {
-              case CLASS -> TagKind.CLASS;
-              case RECORD -> TagKind.RECORD;
-              case INTERFACE -> TagKind.INTERFACE;
-              case ENUM -> TagKind.ENUM;
-              case ANNOTATION_TYPE -> TagKind.ANNOTATION;
-              default -> {
-                logger.warning("Unknown class kind " + node.getKind());
-                yield TagKind.CLASS;
-              }
-            },
-            node.getSimpleName().toString(),
-            p.getLocation(),
-            p.getLine(node),
-            node.getModifiers().getFlags().contains(Modifier.STATIC));
+            typeKind, node.getSimpleName().toString(), p.getLocation(), p.getLine(node), fields);
 
     logger.finer(() -> "Type: " + tag);
 
@@ -86,6 +106,24 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
   public Void visitMethod(MethodTree node, TreeVisitorContext p) {
     if (options.excludeNonPublic && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)) {
       return null;
+    }
+
+    List<TagField> fields = new ArrayList<>();
+
+    if (options.fields.contains(TagField.StaticTag.class)
+        && node.getModifiers().getFlags().contains(Modifier.STATIC)) {
+      fields.add(new TagField.StaticTag());
+    }
+
+    if (options.fields.contains(TagField.EnclosingType.class)) {
+      for (var path : getCurrentPath().getParentPath()) {
+        if (path instanceof ClassTree classTree) {
+          fields.add(
+              new TagField.EnclosingType(
+                  classTree.getSimpleName().toString(), getTypeKind(classTree)));
+          break;
+        }
+      }
     }
 
     Tag tag =
@@ -104,7 +142,7 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
                     .toString(),
             p.getLocation(),
             p.getLine(node),
-            node.getModifiers().getFlags().contains(Modifier.STATIC));
+            fields);
 
     logger.finer(() -> "Method: " + tag);
 
@@ -125,9 +163,23 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
       return scan(node.getInitializer(), p);
     }
 
+    TagKind enclosingTypeKind = getTypeKind(enclosingType);
+
+    List<TagField> fields = new ArrayList<>();
+
+    if (options.fields.contains(TagField.StaticTag.class)
+        && node.getModifiers().getFlags().contains(Modifier.STATIC)) {
+      fields.add(new TagField.StaticTag());
+    }
+
+    if (options.fields.contains(TagField.EnclosingType.class)) {
+      fields.add(
+          new TagField.EnclosingType(enclosingType.getSimpleName().toString(), enclosingTypeKind));
+    }
+
     Tag tag =
         new Tag(
-            enclosingType.getKind() == Tree.Kind.ENUM
+            enclosingTypeKind == TagKind.ENUM
                     && node.getModifiers()
                         .getFlags()
                         .containsAll(List.of(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL))
@@ -136,12 +188,26 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
             node.getName().toString(),
             p.getLocation(),
             p.getLine(node),
-            node.getModifiers().getFlags().contains(Modifier.STATIC));
+            fields);
 
     logger.finer(() -> "Variable: " + tag);
 
     tags.add(tag);
 
     return scan(node.getInitializer(), p);
+  }
+
+  private TagKind getTypeKind(ClassTree classTree) {
+    return switch (classTree.getKind()) {
+      case CLASS -> TagKind.CLASS;
+      case RECORD -> TagKind.RECORD;
+      case INTERFACE -> TagKind.INTERFACE;
+      case ENUM -> TagKind.ENUM;
+      case ANNOTATION_TYPE -> TagKind.ANNOTATION;
+      default -> {
+        logger.warning("Unknown class kind " + classTree.getKind());
+        yield TagKind.CLASS;
+      }
+    };
   }
 }

@@ -15,7 +15,7 @@ public class Jtags {
     boolean absolutePaths = false;
     boolean excludeNonPublic = false;
     boolean excludeAnonymous = false;
-    boolean excludeStaticField = false;
+    List<Class<? extends TagField>> fields = new ArrayList<>();
   }
 
   public static void main(String[] args) {
@@ -40,11 +40,6 @@ public class Jtags {
           options.absolutePaths = true;
           break;
 
-        case "-no-static":
-          logger.config("Excluding 'file:' field in tags");
-          options.excludeStaticField = true;
-          break;
-
         case "-no-non-public":
           logger.config("Excluding non-public elements");
           options.excludeNonPublic = true;
@@ -55,10 +50,47 @@ public class Jtags {
           options.excludeAnonymous = true;
           break;
 
+        case "-fields":
+          String fields =
+              switch (arguments.poll()) {
+                case null -> {
+                  logger.severe("Expected argument after " + argument);
+                  printUsage();
+                  System.exit(1);
+                  yield null;
+                }
+                case String s -> s;
+              };
+
+          options.fields =
+              fields
+                  .chars()
+                  .<Class<? extends TagField>>mapToObj(
+                      it ->
+                          (Class<? extends TagField>)
+                              switch (it) {
+                                case 's' -> TagField.StaticTag.class;
+                                case 'p' -> TagField.Package.class;
+                                case 't' -> TagField.EnclosingType.class;
+                                default -> {
+                                  logger.severe("Unknown field: " + it);
+                                  printUsage();
+                                  System.exit(1);
+                                  yield null;
+                                }
+                              })
+                  .toList();
+
+          logger.config(
+              () ->
+                  "Including fields: "
+                      + String.join(
+                          ", ", options.fields.stream().map(it -> it.getSimpleName()).toList()));
+          break;
+
         case "-lib":
           logger.config("Third-party library mode");
           options.absolutePaths = true;
-          options.excludeStaticField = true;
           options.excludeNonPublic = true;
           options.excludeAnonymous = true;
           break;
@@ -83,6 +115,12 @@ public class Jtags {
       }
     }
 
+    if (options.sources.isEmpty()) {
+      logger.severe("No source files provided");
+      printUsage();
+      System.exit(1);
+    }
+
     System.exit(run(options) ? 0 : 1);
   }
 
@@ -96,16 +134,20 @@ public class Jtags {
   static void printUsage() {
     System.err.println(
         """
-        Usage: jtags [options] <sources...>
-        Options:
-          -o, -output <file>  Write tags to specified <file>
-          -lib                Treat sources as third-party libraries
-                              (alias for -absolute -no-non-public -no-anonymous)
-          -absolute           Use absolute paths for tag locations
-          -no-static          Exclude the "file:" field from tags
-          -no-anonymous       Exclude anonymous classes
-          -no-anonymous       Exclude anonymous classes
-          -h, -help           Show this message
-        """);
+Usage: jtags [options] <sources...>
+Options:
+  -o, -output <file>  Write tags to specified <file>
+  -lib                Treat sources as third-party libraries
+                      (alias for -absolute -no-non-public -no-anonymous)
+  -no-anonymous       Exclude anonymous classes
+  -no-non-public      Exclude non-public elements
+  -absolute           Use absolute paths for tag locations
+  -fields <fields>    Fields to include in tag entries. Default: spt
+                      Avaiblable fields are:
+                        s  static tag
+                        p  package
+                        t  enclosing type
+  -h, -help           Show this message
+""");
   }
 }
