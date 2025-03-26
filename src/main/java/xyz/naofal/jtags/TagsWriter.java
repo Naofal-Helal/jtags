@@ -53,15 +53,15 @@ public record TagsWriter(Options options) {
     writer.write("$/;\"\t");
     writer.write(
         switch (tag.kind()) {
-          case PACKAGE -> 'P';
-          case CLASS -> 'C';
-          case RECORD -> 'R';
-          case INTERFACE -> 'I';
-          case ANNOTATION -> 'A';
-          case ENUM -> 'E';
-          case FIELD -> 'f';
-          case ENUM_CONSTANT -> 'e';
-          case METHOD -> 'm';
+          case PACKAGE -> "Pkg";
+          case CLASS -> "Cls";
+          case RECORD -> "Rcrd";
+          case INTERFACE -> "Intf";
+          case ANNOTATION -> "Anno";
+          case ENUM -> "Enum";
+          case FIELD -> "fld";
+          case ENUM_CONSTANT -> "enum";
+          case METHOD -> "mthd";
         });
 
     for (TagField field : tag.fields()) {

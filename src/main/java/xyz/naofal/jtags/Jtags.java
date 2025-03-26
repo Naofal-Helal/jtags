@@ -15,7 +15,8 @@ public class Jtags {
     boolean absolutePaths = false;
     boolean excludeNonPublic = false;
     boolean excludeAnonymous = false;
-    List<Class<? extends TagField>> fields = new ArrayList<>();
+    List<Class<? extends TagField>> fields =
+        List.of(TagField.StaticTag.class, TagField.Package.class, TagField.EnclosingType.class);
   }
 
   public static void main(String[] args) {
