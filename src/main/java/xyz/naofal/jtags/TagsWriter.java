@@ -9,20 +9,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.util.PriorityQueue;
+import java.util.AbstractQueue;
 import xyz.naofal.jtags.Jtags.Options;
 
 public record TagsWriter(Options options) {
   private static final int MAX_PATTERN_LENGTH = 96;
 
-  public boolean writeTagsFile(PriorityQueue<Tag> tags) {
+  public boolean writeTagsFile(AbstractQueue<Tag> tags) {
 
     try (var outputStream = new FileOutputStream(options().output.toFile());
         var writer = new OutputStreamWriter(outputStream); ) {
 
       writer.write(
           """
-          !_TAG_FILE_ENCODING\tutf-8\t
+          !_TAG_FILE_ENCODING\tutf-8
           !_TAG_FILE_SORTED\t2\t/0=unsorted, 1=sorted, 2=foldcase/
           """);
 
@@ -48,7 +48,7 @@ public record TagsWriter(Options options) {
             ? tag.location().toString()
             : options.output.getParent().toAbsolutePath().relativize(tag.location()).toString());
     writer.write("\t/^");
-    writer.write(tag.line().substring(0, Math.min(tag.line().length(), MAX_PATTERN_LENGTH)));
+    writer.write(tag.line());
     writer.write("$/;\"\t");
     writer.write(
         switch (tag.kind()) {

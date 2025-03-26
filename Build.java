@@ -10,6 +10,20 @@ import java.util.stream.Collectors;
 public class Build {
   static final String program = "jtags";
 
+  static void printUsage() {
+    System.err.println(
+        """
+        Usage: java Build <subcommand> [args...]
+        Subcommands:
+          build          Build %1$s
+          run [args...]  Run %1$s with arguments
+          package        Package %1$s to a JAR file
+            [file]         Output JAR filename [Default: Jtags.jar]
+          test           Run %1$s tests
+        """
+            .formatted(program));
+  }
+
   public static void main(String[] args) {
     rebuildSelf(Build.class, args);
 
@@ -47,6 +61,11 @@ public class Build {
         packageJar(Optional.ofNullable(arguments.poll()));
         break;
 
+      case "test":
+        buildJtags(mainClass, sourcePaths, classPaths);
+        runTests();
+        break;
+
       default:
         logger.severe("Unknown subcommand: " + subcommand);
         printUsage();
@@ -77,16 +96,17 @@ public class Build {
         ".");
   }
 
-  static void printUsage() {
-    System.err.println(
-        """
-        Usage: java Build <subcommand> [args...]
-        Subcommands:
-          build          Build %1$s
-          run [args...]  Run %1$s with arguments
-          package        Package %1$s to a JAR file
-            [file]         Output JAR filename [Default: Jtags.jar]
-        """
-            .formatted(program));
+  static void runTests() {
+    String mainClass = "TestJtags";
+    String[] sourcePaths = glob("src/test/java/**.java");
+
+    if (classNeedsRebuild(mainClass, sourcePaths)) {
+      logger.info("Compiling %s...".formatted(mainClass));
+      if (!compileJava(sourcePaths)) {
+        System.exit(1);
+      }
+    }
+
+    System.exit(runJava(new String[0], new String[] {"-enableassertions"}, mainClass));
   }
 }

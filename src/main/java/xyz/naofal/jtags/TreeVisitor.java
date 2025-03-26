@@ -9,16 +9,17 @@ import com.sun.source.tree.PackageTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.TreePathScanner;
+import java.util.AbstractQueue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.PriorityQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import javax.lang.model.element.Modifier;
 import xyz.naofal.jtags.Jtags.Options;
 
 public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
   public final Options options;
-  public final PriorityQueue<Tag> tags = new PriorityQueue<>();
+  public final AbstractQueue<Tag> tags = new PriorityBlockingQueue<>();
 
   public TreeVisitor(Options options) {
     this.options = options;
@@ -104,7 +105,7 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
   @Override
   public Void visitMethod(MethodTree node, TreeVisitorContext p) {
-    ClassTree enclosingType = (ClassTree)getCurrentPath().getParentPath().getLeaf();
+    ClassTree enclosingType = (ClassTree) getCurrentPath().getParentPath().getLeaf();
 
     if (options.excludeNonPublic
         && !node.getModifiers().getFlags().contains(Modifier.PUBLIC)
