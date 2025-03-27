@@ -25,8 +25,10 @@
  */
 package notest;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
 import java.lang.ProcessBuilder.Redirect;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -38,8 +40,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.IntSummaryStatistics;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -56,43 +61,37 @@ public @interface Test {
     public static String javaBin = javaHome.resolve("bin", "java").toString();
 
     /** Runs all tests in {@code testClass} */
-    public static boolean runTests(Class<?> testClass) {
+    public static void runTests(Class<?> testClass, String[] args) {
+      System.exit(doRunTests(testClass) ? 0 : 1);
+    }
+
+    /** Runs all tests in {@code testClass} */
+    public static boolean doRunTests(Class<?> testClass) {
       IntSummaryStatistics stats =
           Arrays.stream(testClass.getDeclaredMethods())
               .filter(it -> it.isAnnotationPresent(Test.class))
               .map(
                   it -> {
                     try {
-                      System.err.println(
-                          "╭" + center(" Test " + it.getName() + " ", 48, '─') + "╮");
+                      System.err.println(boxTop("Test " + it.getName(), 50));
                       it.setAccessible(true);
                       it.invoke(null);
-                      System.err.println(
-                          "╰" + center(" " + it.getName() + ": SUCCESS ", 48, '─') + "╯");
+                      System.err.println(boxBottom(it.getName() + ": SUCCESS", 50));
                       System.err.println();
                       return 1;
                     } catch (IllegalAccessException ex) {
-                      System.err.println(
-                          "╰"
-                              + center(" ERROR: could not run " + it.getName() + " ", 48, '─')
-                              + "╯");
+                      System.err.println(boxBottom("ERROR: could not run " + it.getName(), 50));
                       System.err.println(ex.toString());
                       System.err.println();
                       return 0;
                     } catch (InvocationTargetException ex) {
                       System.err.println(
-                          "├"
-                              + center(
-                                  " " + ex.getTargetException().getClass().getSimpleName() + " ",
-                                  48,
-                                  '─')
-                              + "┤");
-                      Optional.ofNullable(ex.getTargetException().getMessage())
-                          .orElse("")
-                          .lines()
-                          .forEach(line -> System.err.println("│ " + line));
+                          boxMiddle(ex.getTargetException().getClass().getSimpleName(), 50));
                       System.err.println(
-                          "╰" + center(" " + it.getName() + ": FAIL ", 48, '─') + "╯");
+                          boxLeft(
+                              Optional.ofNullable(ex.getTargetException().getMessage())
+                                  .orElse("")));
+                      System.err.println(boxBottom(it.getName() + ": FAIL", 50));
                       System.err.println();
                       return 0;
                     }
@@ -111,10 +110,10 @@ public @interface Test {
      *
      * @param mainClass The fully qualified class name, e.g. {@code com.example.MyClass$MySubClass}
      * @param args Arguments to pass to the main method
-     * @return Exit status code
+     * @return A {@link Process} representing the started process
      */
-    public static int runJava(String mainClass, String... args) {
-      return runJava(new String[0], new String[0], mainClass, args);
+    public static Process runJava(String mainClass, String... args) {
+      return runJava(new String[0], mainClass, args);
     }
 
     /**
@@ -124,46 +123,25 @@ public @interface Test {
      * @param javaArguments Arguments to pass to the java binary
      * @param mainClass The fully qualified class name, e.g. {@code com.example.MyClass$MySubClass}
      * @param args Arguments to pass to the main method
-     * @return Exit status code
+     * @return A {@link Process} representing the started process
      */
-    public static int runJava(
-        String[] additionalClassPaths, String[] javaArguments, String mainClass, String... args) {
-      String pathSeparator = System.getProperty("path.separator");
-
-      String classPaths =
-          String.join(
-              pathSeparator,
-              Stream.concat(Stream.of(javaClassPath), Arrays.stream(additionalClassPaths))
-                  .toArray(String[]::new));
-
+    public static Process runJava(String[] javaArguments, String mainClass, String... args) {
       Stream<String> commandLineStream =
           Stream.of(
-                  Stream.of(javaBin.toString(), "-cp", classPaths),
+                  Stream.of(javaBin),
                   Arrays.stream(javaArguments),
                   Stream.of(mainClass),
                   Arrays.stream(args))
               .flatMap(it -> it);
 
-      return command(commandLineStream.toArray(String[]::new));
-    }
-
-    /**
-     * Runs a shell command. May throw an {@code IOException}
-     *
-     * @return Exit status code
-     * @throws Exception
-     */
-    public static int command(String... command) {
       ProcessBuilder pb =
-          new ProcessBuilder(command)
-              .redirectInput(Redirect.INHERIT)
-              .redirectOutput(Redirect.INHERIT)
-              .redirectError(Redirect.INHERIT);
-      Process process;
+          new ProcessBuilder(commandLineStream.toArray(String[]::new))
+              .redirectInput(Redirect.PIPE)
+              .redirectOutput(Redirect.PIPE)
+              .redirectError(Redirect.PIPE);
+
       try {
-        process = pb.start();
-        process.waitFor();
-        return process.exitValue();
+        return pb.start();
       } catch (Exception ex) {
         throw new RuntimeException(ex);
       }
@@ -192,6 +170,82 @@ public @interface Test {
       }
     }
 
+    public static record Diff(List<String> diff) {
+
+      public static Diff diff(Reader readerA, Reader readerB) throws IOException {
+        List<String> diff = new ArrayList<>();
+
+        BufferedReader
+            bufReaderA = readerA instanceof BufferedReader ra ? ra : new BufferedReader(readerA),
+            bufReaderB = readerB instanceof BufferedReader rb ? rb : new BufferedReader(readerB);
+
+        String a = bufReaderA.readLine(), b = bufReaderB.readLine();
+        boolean different = false;
+        while (a != null || b != null) {
+          if (a == null || b == null || (a != null && !a.equals(b))) {
+            different = true;
+            if (a != null) {
+              diff.add("-" + a);
+            }
+            if (b != null) {
+              diff.add("+" + b);
+            }
+          } else {
+            diff.add(" " + a);
+          }
+
+          a = bufReaderA.readLine();
+          b = bufReaderB.readLine();
+        }
+
+        if (different) {
+          diff.sort(
+              new Comparator<String>() {
+                public int compare(String s1, String s2) {
+                  char a = s1.charAt(0), b = s2.charAt(0);
+                  if (a == ' ' || b == ' ') return 0;
+                  return b - a;
+                }
+              });
+        } else {
+          diff = List.of();
+        }
+
+        return new Diff(diff);
+      }
+
+      public void assertEquals() {
+        if (diff.isEmpty()) return;
+
+        throw new AssertionError(
+            "Result differs from expected. Diff:\n"
+                + String.join(
+                    "\n",
+                    diff.stream()
+                        .map(
+                            it ->
+                                switch (it.charAt(0)) {
+                                  case ' ' -> it;
+                                  case '-' ->
+                                      "\u001b[38;5;1m%s\u001b[0m"
+                                          .formatted(it)
+                                          .replace(' ', '·')
+                                          .replace('\t', '⇥')
+                                          .replaceAll("·+", "\u001b[38;5;8m$0\u001b[38;5;1m")
+                                          .replaceAll("⇥+", "\u001b[38;5;8m$0\u001b[38;5;1m");
+                                  case '+' ->
+                                      "\u001b[38;5;2m%s\u001b[0m"
+                                          .formatted(it)
+                                          .replace(' ', '·')
+                                          .replace('\t', '⇥')
+                                          .replaceAll("·+", "\u001b[38;5;8m$0\u001b[38;5;2m")
+                                          .replaceAll("⇥+", "\u001b[38;5;8m$0\u001b[38;5;2m");
+                                  default -> throw new IllegalArgumentException();
+                                })
+                        .toList()));
+      }
+    }
+
     /**
      * Pads string to center.
      *
@@ -209,6 +263,23 @@ public @interface Test {
         sb.append(pad);
       }
       return sb.toString();
+    }
+
+    private static String boxTop(String string, int width) {
+      return "╭" + center(" " + string + " ", width - 2, '─') + "╮";
+    }
+
+    private static String boxMiddle(String string, int width) {
+      return "├" + center(" " + string + " ", width - 2, '─') + "┤";
+    }
+
+    private static String boxBottom(String string, int width) {
+      return "╰" + center(" " + string + " ", width - 2, '─') + "╯";
+    }
+
+    private static String boxLeft(String string) {
+      return string;
+      // return String.join("\n", string.lines().map(it -> "│ " + it).toList());
     }
   }
 }

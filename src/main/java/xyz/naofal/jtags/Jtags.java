@@ -137,6 +137,7 @@ public class Jtags {
 Usage: jtags [options] <sources...>
 Options:
   -o, -output <file>  Write tags to specified <file>
+                      Use - for standard output
   -lib                Treat sources as third-party libraries
                       (alias for -no-non-public -no-anonymous)
   -no-anonymous       Exclude anonymous classes

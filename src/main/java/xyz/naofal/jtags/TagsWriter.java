@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.file.Path;
 import java.util.AbstractQueue;
 import xyz.naofal.jtags.Jtags.Options;
 
@@ -16,9 +17,15 @@ public record TagsWriter(Options options) {
   private static final int MAX_PATTERN_LENGTH = 96;
 
   public boolean writeTagsFile(AbstractQueue<Tag> tags) {
-
-    try (var outputStream = new FileOutputStream(options().output.toFile());
+    try (var outputStream =
+            options().output.toString().equals("-")
+                ? System.out
+                : new FileOutputStream(options().output.toFile());
         var writer = new OutputStreamWriter(outputStream); ) {
+
+      if (outputStream == System.out) {
+        options().output = Path.of(".", "tags");
+      }
 
       writer.write(
           """

@@ -1,5 +1,6 @@
-import static notest.Test.Util;
+import static notest.Test.Util.*;
 
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,26 +10,26 @@ class TestJtags {
   public static final String Jtags = "xyz.naofal.jtags.Jtags";
 
   public static void main(String[] args) {
-    System.exit(Util.runTests(TestJtags.class) ? 0 : 1);
+    runTests(TestJtags.class, args);
   }
 
   @Test
   static void basicExample() throws IOException {
     Path file = Files.createTempFile("jtags", null);
-    Util.runJava(
-        new String[0],
-        new String[] {"-Dlogger.level=CONFIG"},
-        Jtags,
-        "-o",
-        file.toString(),
-        "src/test/java/examples/BasicExample.java");
-    assert Files.readString(file)
-            .trim()
-            .equals(
-                """
-                ABC
-                """
-                    .trim())
-        : "Unexpected Result:\n" + Files.readString(file);
+    var tags =
+        runJava(
+                new String[] {"-Dlogger.level=CONFIG"},
+                Jtags,
+                "-o",
+                "-",
+                "src/test/java/examples/BasicExample.java")
+            .inputReader();
+
+    Diff.diff(
+            tags,
+            new FileReader(
+                Path.of("src", "test", "java", "snapshots", "BasicExample.basicExample.1")
+                    .toFile()))
+        .assertEquals();
   }
 }
