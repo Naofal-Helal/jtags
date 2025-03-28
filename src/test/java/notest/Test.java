@@ -28,7 +28,6 @@ package notest;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.Reader;
 import java.lang.ProcessBuilder.Redirect;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -42,7 +41,6 @@ import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Optional;
@@ -84,13 +82,13 @@ public @interface Test {
                       System.err.println(ex.toString());
                       System.err.println();
                       return 0;
-                    } catch (InvocationTargetException ex) {
-                      System.err.println(
-                          boxMiddle(ex.getTargetException().getClass().getSimpleName(), 50));
-                      System.err.println(
-                          boxLeft(
-                              Optional.ofNullable(ex.getTargetException().getMessage())
-                                  .orElse("")));
+                    } catch (InvocationTargetException invocationException) {
+                      var ex = invocationException.getTargetException();
+                      System.err.println(boxMiddle(ex.getClass().getSimpleName(), 50));
+                      System.err.println(boxLeft(Optional.ofNullable(ex.getMessage()).orElse("")));
+                      if (!(ex instanceof AssertionError)) {
+                        ex.printStackTrace();
+                      }
                       System.err.println(boxBottom(it.getName() + ": FAIL", 50));
                       System.err.println();
                       return 0;
@@ -170,51 +168,50 @@ public @interface Test {
       }
     }
 
+    /** Representation of changes between two string sequences */
     public static record Diff(List<String> diff) {
 
-      public static Diff diff(Reader readerA, Reader readerB) throws IOException {
-        List<String> diff = new ArrayList<>();
-
-        BufferedReader
-            bufReaderA = readerA instanceof BufferedReader ra ? ra : new BufferedReader(readerA),
-            bufReaderB = readerB instanceof BufferedReader rb ? rb : new BufferedReader(readerB);
-
-        String a = bufReaderA.readLine(), b = bufReaderB.readLine();
-        boolean different = false;
-        while (a != null || b != null) {
-          if (a == null || b == null || (a != null && !a.equals(b))) {
-            different = true;
-            if (a != null) {
-              diff.add("-" + a);
+      /** Creates a {@code Diff} representing changes from {@code a} to {@code b} */
+      public static Diff diff(List<String> a, List<String> b) {
+        int diffSize = 0;
+        // longest common subsequence algorithm
+        int[][] dp = new int[a.size() + 1][b.size() + 1];
+        for (int i = 1; i <= a.size(); i++) {
+          for (int j = 1; j <= b.size(); j++) {
+            if (a.get(i - 1).equals(b.get(j - 1))) {
+              dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+              dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
             }
-            if (b != null) {
-              diff.add("+" + b);
-            }
-          } else {
-            diff.add(" " + a);
           }
-
-          a = bufReaderA.readLine();
-          b = bufReaderB.readLine();
         }
 
-        if (different) {
-          diff.sort(
-              new Comparator<String>() {
-                public int compare(String s1, String s2) {
-                  char a = s1.charAt(0), b = s2.charAt(0);
-                  if (a == ' ' || b == ' ') return 0;
-                  return b - a;
-                }
-              });
-        } else {
-          diff = List.of();
+        int lcs = dp[a.size()][b.size()];
+        if (lcs == a.size()) return new Diff(List.of());
+
+        List<String> diff = new ArrayList<>(a.size());
+        int i = a.size(), j = b.size();
+        while (true) {
+          if (i > 0 && j > 0 && a.get(i - 1).equals(b.get(j - 1))) {
+            diff.add(" " + a.get(i - 1));
+            i--;
+            j--;
+          } else if (j > 0 && (i == 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+            if (j > 0) diff.add("+" + b.get(j - 1));
+            j--;
+          } else if (i > 0 && (j == 0 || dp[i][j - 1] < dp[i - 1][j])) {
+            if (i > 0) diff.add("-" + a.get(i - 1));
+            i--;
+          } else {
+            break;
+          }
         }
 
-        return new Diff(diff);
+        return new Diff(diff.reversed());
       }
 
-      public void assertEquals() {
+      /** Asserts that the two sequences are the same */
+      public void assertEqual() {
         if (diff.isEmpty()) return;
 
         throw new AssertionError(
@@ -244,6 +241,14 @@ public @interface Test {
                                 })
                         .toList()));
       }
+    }
+
+    /** Reads all lines from {@code reader} */
+    public static List<String> readAllLines(BufferedReader reader) throws IOException {
+      var lines = new ArrayList<String>();
+      String line;
+      while ((line = reader.readLine()) != null) lines.add(line);
+      return lines;
     }
 
     /**

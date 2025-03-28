@@ -364,11 +364,7 @@ public class NoBuild {
    * @throws Exception
    */
   public static int commandThrows(String... command) throws IOException {
-    ProcessBuilder pb =
-        new ProcessBuilder(command)
-            .redirectInput(Redirect.INHERIT)
-            .redirectOutput(Redirect.INHERIT)
-            .redirectError(Redirect.INHERIT);
+    ProcessBuilder pb = new ProcessBuilder(command).inheritIO();
     Process process;
     try {
       process = pb.start();

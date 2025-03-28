@@ -1,8 +1,8 @@
 import static notest.Test.Util.*;
 
+import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import notest.Test;
 
@@ -15,21 +15,21 @@ class TestJtags {
 
   @Test
   static void basicExample() throws IOException {
-    Path file = Files.createTempFile("jtags", null);
-    var tags =
+    var process =
         runJava(
                 new String[] {"-Dlogger.level=CONFIG"},
                 Jtags,
                 "-o",
                 "-",
-                "src/test/java/examples/BasicExample.java")
-            .inputReader();
+                "src/test/java/examples/BasicExample.java");
+
+    var tags = readAllLines(process.inputReader());
 
     Diff.diff(
             tags,
-            new FileReader(
+            readAllLines(new BufferedReader(new FileReader(
                 Path.of("src", "test", "java", "snapshots", "BasicExample.basicExample.1")
-                    .toFile()))
-        .assertEquals();
+                    .toFile()))))
+        .assertEqual();
   }
 }
