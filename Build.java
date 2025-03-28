@@ -63,7 +63,7 @@ public class Build {
 
       case "test":
         buildJtags(mainClass, sourcePaths, classPaths);
-        runTests();
+        runTests(arguments.toArray(String[]::new));
         break;
 
       default:
@@ -96,7 +96,7 @@ public class Build {
         ".");
   }
 
-  static void runTests() {
+  static void runTests(String[] args) {
     String mainClass = "TestJtags";
     String[] sourcePaths = glob("src/test/java/**.java");
 
@@ -107,6 +107,6 @@ public class Build {
       }
     }
 
-    System.exit(runJava(new String[0], new String[] {"-enableassertions"}, mainClass));
+    System.exit(runJava(new String[0], new String[] {"-enableassertions"}, mainClass, args));
   }
 }

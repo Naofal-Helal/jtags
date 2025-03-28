@@ -39,10 +39,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.IntSummaryStatistics;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -57,9 +60,27 @@ public @interface Test {
     public static Path javaHome = Paths.get(System.getProperty("java.home"));
     public static String javaClassPath = System.getProperty("java.class.path");
     public static String javaBin = javaHome.resolve("bin", "java").toString();
+    public static Path snapshotsPath = Path.of("src", "test", "java", "snapshots");
+
+    private static class Options {
+      boolean updateSnapshots = false;
+    }
+
+    private static Options options = new Options();
 
     /** Runs all tests in {@code testClass} */
     public static void runTests(Class<?> testClass, String[] args) {
+      var arguments = new ArrayDeque<String>(Arrays.asList(args));
+
+      switch (arguments.poll()) {
+        case "-u", "-update-snapshots":
+          options.updateSnapshots = true;
+          break;
+        case null:
+        default:
+          break;
+      }
+
       System.exit(doRunTests(testClass) ? 0 : 1);
     }
 
@@ -173,6 +194,11 @@ public @interface Test {
 
       /** Creates a {@code Diff} representing changes from {@code a} to {@code b} */
       public static Diff diff(List<String> a, List<String> b) {
+        if (a.equals(b)) return new Diff(List.of());
+
+        if (a.isEmpty()) a = List.of("");
+        if (b.isEmpty()) b = List.of("");
+
         int diffSize = 0;
         // longest common subsequence algorithm
         int[][] dp = new int[a.size() + 1][b.size() + 1];
@@ -249,6 +275,31 @@ public @interface Test {
       String line;
       while ((line = reader.readLine()) != null) lines.add(line);
       return lines;
+    }
+
+    public static record Snapshot(Path path) {
+      public void assertEquals(List<String> result) throws IOException {
+        var lines = Files.readAllLines(path);
+        if (options.updateSnapshots && !lines.equals(result)) {
+          Files.write(path, result);
+          return;
+        }
+        Diff.diff(lines, result).assertEqual();
+      }
+    }
+
+    private static Map<String, Integer> snapshotCount = new HashMap<>();
+
+    public static Snapshot getSnapshot() throws IOException {
+      var stackFrame = new Throwable().getStackTrace()[1];
+      var className = stackFrame.getClassName();
+      var methodName = stackFrame.getMethodName();
+      var prefix = className + "." + methodName;
+      var snapshotNumber = snapshotCount.compute(prefix, (k, v) -> v == null ? 1 : ++v);
+      Path path = snapshotsPath.resolve(prefix + "." + snapshotNumber);
+      if (!snapshotsPath.toFile().exists()) snapshotsPath.toFile().mkdirs();
+      if (!path.toFile().exists()) Files.write(path, List.of());
+      return new Snapshot(path);
     }
 
     /**
