@@ -13,22 +13,20 @@ import java.util.AbstractQueue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.PriorityBlockingQueue;
 import javax.lang.model.element.Modifier;
 import xyz.naofal.jtags.Jtags.Options;
 
 public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
   public final Options options;
-  public final AbstractQueue<Tag> tags = new PriorityBlockingQueue<>();
+  public final AbstractQueue<Tag> tags;
 
-  public TreeVisitor(Options options) {
+  public TreeVisitor(Options options, AbstractQueue<Tag> tagQueue) {
     this.options = options;
+    this.tags = tagQueue;
   }
 
   @Override
   public Void visitCompilationUnit(CompilationUnitTree node, TreeVisitorContext p) {
-    p.compilationUnitTree = node;
-
     logger.fine(() -> "Collecting tags in file: " + p.getLocation());
 
     return scan(node.getTypeDecls(), p);

@@ -5,8 +5,11 @@ import static xyz.naofal.jtags.JtagsLogger.logger;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
 import com.sun.source.util.Trees;
-import java.io.IOException;
 import java.util.AbstractQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -23,20 +26,25 @@ public class TagCollector {
       Iterable<? extends JavaFileObject> compilationUnits =
           fileManager.getJavaFileObjects(options.sources.toArray(String[]::new));
 
+      logger.info("Parsing sources...");
       JavacTask task =
           (JavacTask) compiler.getTask(null, fileManager, null, null, null, compilationUnits);
       Iterable<? extends CompilationUnitTree> trees = task.parse();
 
-      TreeVisitor treeVisitor = new TreeVisitor(options);
-      TreeVisitorContext context = new TreeVisitorContext(Trees.instance(task));
+      logger.info("Collecting tags...");
 
+      Trees treeUtils = Trees.instance(task);
+      AbstractQueue<Tag> tags = new PriorityBlockingQueue<>();
+
+      TreeVisitor treeVisitor = new TreeVisitor(options, tags);
       for (CompilationUnitTree compilationUnitTree : trees) {
-        treeVisitor.scan(compilationUnitTree, context);
+              TreeVisitorContext context = new TreeVisitorContext(compilationUnitTree, treeUtils);
+              treeVisitor.scan(compilationUnitTree, context);
       }
 
-      return treeVisitor.tags;
+      return tags;
 
-    } catch (IOException ex) {
+    } catch (Exception ex) {
       logger.severe(ex.toString());
       System.exit(1);
       return null;

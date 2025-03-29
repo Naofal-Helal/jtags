@@ -16,11 +16,12 @@ import java.util.Optional;
 public class TreeVisitorContext {
   final Trees trees;
   final SourcePositions sourcePositions;
-  public CompilationUnitTree compilationUnitTree;
+  final CompilationUnitTree compilationUnitTree;
 
-  public TreeVisitorContext(Trees trees) {
+  public TreeVisitorContext(CompilationUnitTree compilationUnitTree, Trees trees) {
+    this.compilationUnitTree = compilationUnitTree;
     this.trees = trees;
-    sourcePositions = trees.getSourcePositions();
+    this.sourcePositions = trees.getSourcePositions();
   }
 
   public Path getLocation() {
