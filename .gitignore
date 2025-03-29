@@ -9,6 +9,7 @@
 
 /third-party/downloads/*
 /third-party/**/*.jar
+/src/test/resources/downloads/*
 
 /*.jar
 /docs

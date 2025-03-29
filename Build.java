@@ -1,10 +1,14 @@
 import static nobuild.NoBuild.*;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class Build {
@@ -57,8 +61,9 @@ public class Build {
         break;
 
       case "package":
+        clean();
         buildJtags(mainClass, sourcePaths, classPaths);
-        packageJar(Optional.ofNullable(arguments.poll()));
+        packageJar(Optional.ofNullable(arguments.poll()).orElse("Jtags.jar"));
         break;
 
       case "test":
@@ -85,15 +90,34 @@ public class Build {
     }
   }
 
-  static void packageJar(Optional<String> jarfile) {
+  static void clean() {
+    command("rm", "-rf", buildClassPath + "/xyz");
+  }
+
+  static void packageJar(String jarfile) {
+    File file = new File(jarfile);
+    file.delete();
+
     command(
-        "jar",
-        "cfe",
-        jarfile.orElse("Jtags.jar"),
-        "xyz.naofal.jtags.Jtags",
-        "-C",
-        buildClassPath,
-        ".");
+        "jar", "cfe", jarfile, "xyz.naofal.jtags.Jtags", "-C", buildClassPath, "xyz/naofal/jtags");
+
+    // Make jar file executable by hashbang
+    byte[] hashbang = "#!/usr/bin/env -S java -jar\n".getBytes();
+    int fileLength = (int) file.length();
+    int length = fileLength + hashbang.length;
+    byte[] bytes = new byte[length];
+    System.arraycopy(hashbang, 0, bytes, 0, hashbang.length);
+    try {
+      FileInputStream in = new FileInputStream(file);
+      in.read(bytes, hashbang.length, fileLength);
+      in.close();
+      FileOutputStream out = new FileOutputStream(file);
+      out.write(bytes);
+      out.close();
+    } catch (Exception ex) {
+      logger.log(Level.SEVERE, "Problem during file IO with " + jarfile, ex);
+    }
+    file.setExecutable(true);
   }
 
   static void runTests(String[] args) {
