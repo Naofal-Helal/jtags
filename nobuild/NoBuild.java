@@ -113,7 +113,7 @@ public class NoBuild {
 
   /** Returns the class path of the build script */
   public static String defaultBuildClassPath(Class<?> buildClass) {
-    URL buildClassUrl = buildClass.getResource(buildClass.getName() + ".class");
+    URL buildClassUrl = buildClass.getResource(buildClass.getSimpleName() + ".class");
     return Paths.get(buildClassUrl.getPath()).getParent().toString();
   }
 
@@ -187,7 +187,7 @@ public class NoBuild {
    * @param additionalSources Additional sources to watch and compile
    */
   public static void rebuildSelf(Class<?> buildClass, String[] args, String... additionalSources) {
-    String buildSource = buildClass.getName() + ".java";
+    String buildSource = buildClass.getName().replaceAll("\\.", File.separator) + ".java";
     buildClassPath = defaultBuildClassPath(buildClass);
 
     String[] sourcePaths =
