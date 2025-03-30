@@ -31,6 +31,10 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
 
     logger.fine(() -> "Collecting tags in file: " + p.getLocation());
 
+    if (node.getPackage() != null) {
+      scan(node.getPackage(), p);
+    }
+
     return scan(node.getTypeDecls(), p);
   }
 
@@ -38,7 +42,11 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
   public Void visitPackage(PackageTree node, TreeVisitorContext p) {
     Tag tag =
         new Tag(
-            TagKind.PACKAGE, node.getPackageName().toString(), p.getLocation(), p.getLine(node));
+            TagKind.PACKAGE, node.getPackageName().toString(), p.getLocation().getParent(), "");
+
+    if (tags.contains(tag)) { 
+      return null;
+    }
 
     logger.finer(() -> "Package: " + tag);
 
