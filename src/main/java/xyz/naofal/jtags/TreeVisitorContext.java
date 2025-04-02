@@ -32,10 +32,12 @@ public class TreeVisitorContext {
     long offset = getOffsetInSource(compilationUnitTree, node);
     try (var reader = new BufferedReader(compilationUnitTree.getSourceFile().openReader(true))) {
       long skipped = 0;
+      String prevLine = "";
       while (true) {
         String line = reader.readLine();
-        if (line == null) throw new RuntimeException("Reached the end of the stream");
+        if (line == null) return prevLine;
         skipped += line.length() + 1;
+        prevLine = line;
         if (skipped >= offset) return line;
       }
     } catch (Exception e) {

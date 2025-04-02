@@ -17,6 +17,7 @@ public record TagsWriter(Options options) {
   private static final int MAX_PATTERN_LENGTH = 96;
 
   public boolean writeTagsFile(AbstractQueue<Tag> tags) {
+    logger.fine("Writing tags to " + options().output.toString());
     try (var outputStream =
             options().output.toString().equals("-")
                 ? System.out

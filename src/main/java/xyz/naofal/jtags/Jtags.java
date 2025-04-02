@@ -7,6 +7,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public class Jtags {
   static class Options {
@@ -17,6 +18,7 @@ public class Jtags {
     boolean excludeAnonymous = false;
     List<Class<? extends TagField>> fields =
         List.of(TagField.StaticTag.class, TagField.Package.class, TagField.EnclosingType.class);
+    Optional<Path> extractPath = Optional.empty();
   }
 
   public static void main(String[] args) {
@@ -104,9 +106,23 @@ public class Jtags {
                   System.exit(1);
                   yield null;
                 }
-                case String output -> Path.of(output);
+                case String output -> Path.of(output).toAbsolutePath();
               };
           logger.config("Writing tags to " + options.output.toString());
+          break;
+
+        case "-extract-dir":
+          options.extractPath =
+              switch (arguments.poll()) {
+                case null -> {
+                  logger.severe("Expected argument after " + argument);
+                  printUsage();
+                  System.exit(1);
+                  yield null;
+                }
+                case String dir -> Optional.of(Path.of(dir).toAbsolutePath());
+              };
+          logger.config("Extracting JARs to " + options.extractPath.toString());
           break;
 
         default:
@@ -137,7 +153,7 @@ public class Jtags {
 Usage: jtags [options] <sources...>
 Options:
   -o, -output <file>  Write tags to specified <file>
-                      Use - for standard output
+                      Use - for standard output. Default: tags
   -lib                Treat sources as third-party libraries
                       (alias for -no-non-public -no-anonymous)
   -no-anonymous       Exclude anonymous classes
@@ -148,6 +164,7 @@ Options:
                         s  static tag
                         p  package
                         t  enclosing type
+  -extract-dir <dir>  Extract JAR and ZIP archives to <dir>
   -h, -help           Show this message
 """);
   }

@@ -41,10 +41,9 @@ public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
   @Override
   public Void visitPackage(PackageTree node, TreeVisitorContext p) {
     Tag tag =
-        new Tag(
-            TagKind.PACKAGE, node.getPackageName().toString(), p.getLocation().getParent(), "");
+        new Tag(TagKind.PACKAGE, node.getPackageName().toString(), p.getLocation().getParent(), "");
 
-    if (tags.contains(tag)) { 
+    if (tags.contains(tag)) {
       return null;
     }
 

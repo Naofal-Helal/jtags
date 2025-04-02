@@ -6,7 +6,11 @@ import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
 import com.sun.source.util.Trees;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.AbstractQueue;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.stream.Stream;
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -20,8 +24,10 @@ public class TagCollector {
   public static AbstractQueue<Tag> collectTags(Options options) {
     try (StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null)) {
 
-      Iterable<? extends JavaFileObject> compilationUnits =
-          fileManager.getJavaFileObjects(options.sources.toArray(String[]::new));
+      String[] sources = resolveSources(options);
+      logger.finest(() -> "Collecting tags from sources: " + Arrays.toString(sources));
+
+      Iterable<? extends JavaFileObject> compilationUnits = fileManager.getJavaFileObjects(sources);
 
       JavacTask task =
           (JavacTask) compiler.getTask(null, fileManager, null, null, null, compilationUnits);
@@ -41,5 +47,38 @@ public class TagCollector {
       System.exit(1);
       return null;
     }
+  }
+
+  static String[] resolveSources(Options options) {
+    return options.sources.stream()
+        .flatMap(
+            path ->
+                switch (path) {
+                  case String _ when path.endsWith(".java") -> Stream.of(path);
+                  case String _ when path.endsWith(".jar") || path.endsWith(".zip") -> {
+                    if (options.extractPath.isEmpty()) {
+                      logger.severe("Archive file specified, but no -extract-dir");
+                      System.exit(1);
+                    }
+                    Path archivePath = Path.of(path);
+                    String archiveName = archivePath.getFileName().toString();
+                    yield ArchiveExtractor.extractArchive(
+                        archivePath,
+                        options
+                            .extractPath
+                            .get()
+                            .resolve(archiveName.substring(0, archiveName.lastIndexOf('.'))),
+                        "^.*\\.java$")
+                        .stream();
+                  }
+                  default -> {
+                    logger.warning("Ignoring unsupported source: " + path);
+                    yield Stream.of();
+                  }
+                })
+        .filter(Objects::nonNull)
+        // TODO: support package-info and module-info
+        .filter(it -> !it.endsWith("package-info.java") && !it.endsWith("module-info.java"))
+        .toArray(String[]::new);
   }
 }
