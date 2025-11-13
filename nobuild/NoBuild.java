@@ -46,6 +46,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -154,7 +155,7 @@ public class NoBuild {
     @Override
     public void publish(LogRecord record) {
       if (record.getMessage() != null && !record.getMessage().isEmpty()) {
-        if (System.console().isTerminal()) {
+        if (Optional.ofNullable(System.console()).map(it -> it.isTerminal()).orElse(false)) {
           int color = colors.get(record.getLevel());
           System.err.printf(
               "\u001b[38;5;%dm[%s]\u001b[0m %s%n",
@@ -386,10 +387,9 @@ public class NoBuild {
     PathMatcher pathMatcher =
         FileSystems.getDefault()
             .getPathMatcher(String.join("", "glob:", cwd.toString(), File.separator, globPattern));
-    try (@SuppressWarnings("unused")
-        Stream<Path> paths =
-            Files.find(
-                cwd, Integer.MAX_VALUE, (path, basicFileAttributes) -> pathMatcher.matches(path))) {
+    try (Stream<Path> paths =
+        Files.find(
+            cwd, Integer.MAX_VALUE, (path, basicFileAttributes) -> pathMatcher.matches(path))) {
       return paths.map(Path::toString).toArray(String[]::new);
     } catch (IOException e) {
       return new String[0];

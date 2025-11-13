@@ -76,8 +76,7 @@ public @interface Test {
         case "-u", "-update-snapshots":
           options.updateSnapshots = true;
           break;
-        case null:
-        default:
+        case null, default:
           break;
       }
 

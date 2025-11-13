@@ -106,6 +106,7 @@ public class Jtags {
                   System.exit(1);
                   yield null;
                 }
+                case "-" -> Path.of("-");
                 case String output -> Path.of(output).toAbsolutePath();
               };
           logger.config("Writing tags to " + options.output.toString());
