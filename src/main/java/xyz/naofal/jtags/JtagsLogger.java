@@ -15,6 +15,10 @@ public class JtagsLogger {
   static {
     logger.setUseParentHandlers(false);
     logger.addHandler(loggingHandler);
+    setLevelFromProperties();
+  }
+
+  public static void setLevelFromProperties() {
     String level;
     if ((level = System.getProperty("logger.level")) != null) {
       logger.setLevel(Level.parse(level));

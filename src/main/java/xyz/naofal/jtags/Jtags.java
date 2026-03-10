@@ -59,8 +59,8 @@ public class Jtags {
           String fields =
               switch (arguments.poll()) {
                 case null -> {
-                  logger.severe("Expected argument after " + argument);
                   printUsage();
+                  logger.severe("Expected argument after " + argument);
                   System.exit(1);
                   yield null;
                 }
@@ -72,18 +72,17 @@ public class Jtags {
                   .chars()
                   .<Class<? extends TagField>>mapToObj(
                       it ->
-                          (Class<? extends TagField>)
-                              switch (it) {
-                                case 's' -> TagField.StaticTag.class;
-                                case 'p' -> TagField.Package.class;
-                                case 't' -> TagField.EnclosingType.class;
-                                default -> {
-                                  logger.severe("Unknown field: " + it);
-                                  printUsage();
-                                  System.exit(1);
-                                  yield null;
-                                }
-                              })
+                          switch (it) {
+                            case 's' -> TagField.StaticTag.class;
+                            case 'p' -> TagField.Package.class;
+                            case 't' -> TagField.EnclosingType.class;
+                            default -> {
+                              printUsage();
+                              logger.severe("Unknown field: " + it);
+                              System.exit(1);
+                              yield null;
+                            }
+                          })
                   .toList();
 
           logger.config(
@@ -103,8 +102,8 @@ public class Jtags {
           options.output =
               switch (arguments.poll()) {
                 case null -> {
-                  logger.severe("Expected argument after " + argument);
                   printUsage();
+                  logger.severe("Expected argument after " + argument);
                   System.exit(1);
                   yield null;
                 }
@@ -118,8 +117,8 @@ public class Jtags {
           options.extractPath =
               switch (arguments.poll()) {
                 case null -> {
-                  logger.severe("Expected argument after " + argument);
                   printUsage();
+                  logger.severe("Expected argument after " + argument);
                   System.exit(1);
                   yield null;
                 }
@@ -131,6 +130,10 @@ public class Jtags {
         case String arg
         when arg.startsWith("@"):
           String filename = arg.substring(1);
+          if (filename.isBlank()) {
+            logger.severe("Expected filename after @");
+            System.exit(1);
+          }
           try {
             logger.config("Reading arguments from " + filename);
             Files.readAllLines(Path.of(filename)).stream()
@@ -140,9 +143,23 @@ public class Jtags {
                 .reversed()
                 .forEach(arguments::addFirst);
           } catch (Exception ex) {
-            logger.log(Level.SEVERE, "Could not read file " + filename + "\n", ex);
+            logger.log(Level.SEVERE, "Could not arguments from file `" + filename + "`", ex);
             System.exit(1);
           }
+          break;
+
+        case String arg
+        when arg.startsWith("-D"):
+          int equals = arg.indexOf('=');
+          if (equals < 0) {
+            logger.severe("Invalid argument: expected -D<key>=<value>");
+            System.exit(1);
+          }
+          String key = arg.substring(2, equals);
+          String value = arg.substring(equals + 1);
+          logger.config("Set system property %s=%s".formatted(key, value));
+          System.setProperty(key, value);
+          JtagsLogger.setLevelFromProperties();
           break;
 
         default:
@@ -152,8 +169,8 @@ public class Jtags {
     }
 
     if (options.sources.isEmpty()) {
-      logger.severe("No source files provided");
       printUsage();
+      logger.severe("No source files provided");
       System.exit(1);
     }
 
@@ -162,7 +179,6 @@ public class Jtags {
 
   static boolean run(Options options) {
     var tags = TagCollector.collectTags(options);
-
     var tagsWriter = new TagsWriter(options);
     return tagsWriter.writeTagsFile(tags);
   }
@@ -186,6 +202,7 @@ Options:
                         p  package
                         t  enclosing type
   -extract-dir <dir>  Extract JAR and ZIP archives to <dir>
+  -D<key>=<value>     Set system property, e.g. -Dlogger.level=FINE
   -h, -help           Show this message
 """);
   }
