@@ -2,12 +2,14 @@ package xyz.naofal.jtags;
 
 import static xyz.naofal.jtags.JtagsLogger.logger;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
 
 public class Jtags {
   static class Options {
@@ -126,6 +128,23 @@ public class Jtags {
           logger.config("Extracting JARs to " + options.extractPath.toString());
           break;
 
+        case String arg
+        when arg.startsWith("@"):
+          String filename = arg.substring(1);
+          try {
+            logger.config("Reading arguments from " + filename);
+            Files.readAllLines(Path.of(filename)).stream()
+                .filter(it -> !it.trim().startsWith("#") && !it.isBlank())
+                .flatMap(it -> Arrays.stream(it.split("#")[0].trim().split("\\s+")))
+                .toList()
+                .reversed()
+                .forEach(arguments::addFirst);
+          } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Could not read file " + filename + "\n", ex);
+            System.exit(1);
+          }
+          break;
+
         default:
           options.sources.add(argument);
           break;
@@ -150,9 +169,10 @@ public class Jtags {
 
   static void printUsage() {
     System.err.println(
-        """
+"""
 Usage: jtags [options] <sources...>
 Options:
+  @<file>             Read arguments from <file>
   -o, -output <file>  Write tags to specified <file>
                       Use - for standard output. Default: tags
   -lib                Treat sources as third-party libraries
