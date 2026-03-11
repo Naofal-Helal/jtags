@@ -103,11 +103,25 @@ public @interface Test {
                       System.err.println();
                       return 0;
                     } catch (InvocationTargetException invocationException) {
+                      Process process = null;
                       var ex = invocationException.getTargetException();
+                      if (ex instanceof ProcessException processEx) {
+                        process = processEx.process;
+                        if (ex.getCause() != null) ex = ex.getCause();
+                      }
                       System.err.println(boxMiddle(ex.getClass().getSimpleName(), 50));
                       System.err.println(boxLeft(Optional.ofNullable(ex.getMessage()).orElse("")));
                       if (!(ex instanceof AssertionError)) {
                         ex.printStackTrace();
+                      }
+                      if (process != null) {
+                        System.err.println(boxMiddle("Standard Error", 50));
+                        try {
+                          process.getErrorStream().transferTo(System.err);
+                        } catch (IOException e) {
+                          System.err.println(boxMiddle("IO Exception", 50));
+                          e.printStackTrace();
+                        }
                       }
                       System.err.println(boxBottom(it.getName() + ": FAIL", 50));
                       System.err.println();
@@ -166,6 +180,22 @@ public @interface Test {
     }
 
     /**
+     * Exception for raising assertion errors with process streams.
+     *
+     * <p>Use this to add stderr to test output.
+     */
+    public static class ProcessException extends RuntimeException {
+      @java.io.Serial static final long serialVersionUID = 7847905676592877851L;
+
+      public transient Process process;
+
+      public ProcessException(Process process, Throwable cause) {
+        super("", cause);
+        this.process = process;
+      }
+    }
+
+    /**
      * Returns file paths that match a {@code globPattern}
      *
      * @see java.nio.file.FileSystem#getPathMatcher(String) getPathMatcher
@@ -176,12 +206,9 @@ public @interface Test {
           FileSystems.getDefault()
               .getPathMatcher(
                   String.join("", "glob:", cwd.toString(), File.separator, globPattern));
-      try (@SuppressWarnings("unused")
-          Stream<Path> paths =
-              Files.find(
-                  cwd,
-                  Integer.MAX_VALUE,
-                  (path, basicFileAttributes) -> pathMatcher.matches(path))) {
+      try (Stream<Path> paths =
+          Files.find(
+              cwd, Integer.MAX_VALUE, (path, basicFileAttributes) -> pathMatcher.matches(path))) {
         return paths.map(Path::toString).toArray(String[]::new);
       } catch (IOException ex) {
         throw new RuntimeException("Error during glob pattern matching", ex);
@@ -198,7 +225,6 @@ public @interface Test {
         if (a.isEmpty()) a = List.of("");
         if (b.isEmpty()) b = List.of("");
 
-        int diffSize = 0;
         // longest common subsequence algorithm
         int[][] dp = new int[a.size() + 1][b.size() + 1];
         for (int i = 1; i <= a.size(); i++) {
@@ -240,7 +266,7 @@ public @interface Test {
         if (diff.isEmpty()) return;
 
         throw new AssertionError(
-            "Result differs from expected. Diff:\n"
+            "\u001b[32mResult\u001b[m differs from \u001b[31mexpected\u001b[m. Diff:\n"
                 + String.join(
                     "\n",
                     diff.stream()
@@ -249,19 +275,19 @@ public @interface Test {
                                 switch (it.charAt(0)) {
                                   case ' ' -> it;
                                   case '-' ->
-                                      "\u001b[38;5;1m%s\u001b[0m"
+                                      "\u001b[31m%s\u001b[0m"
                                           .formatted(it)
                                           .replace(' ', '·')
                                           .replace('\t', '⇥')
-                                          .replaceAll("·+", "\u001b[38;5;8m$0\u001b[38;5;1m")
-                                          .replaceAll("⇥+", "\u001b[38;5;8m$0\u001b[38;5;1m");
+                                          .replaceAll("·+", "\u001b[90m$0\u001b[31m")
+                                          .replaceAll("⇥+", "\u001b[90m$0\u001b[31m");
                                   case '+' ->
-                                      "\u001b[38;5;2m%s\u001b[0m"
+                                      "\u001b[32m%s\u001b[0m"
                                           .formatted(it)
                                           .replace(' ', '·')
                                           .replace('\t', '⇥')
-                                          .replaceAll("·+", "\u001b[38;5;8m$0\u001b[38;5;2m")
-                                          .replaceAll("⇥+", "\u001b[38;5;8m$0\u001b[38;5;2m");
+                                          .replaceAll("·+", "\u001b[90m$0\u001b[32m")
+                                          .replaceAll("⇥+", "\u001b[90m$0\u001b[32m");
                                   default -> throw new IllegalArgumentException();
                                 })
                         .toList()));

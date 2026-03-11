@@ -9,6 +9,7 @@
   <classpathentry kind="output" path="jdtls-build" />
   <!-- Soruces -->
   <classpathentry kind="src" path="src/main/java" />
+  <classpathentry kind="src" path="src/test/java" />
   <classpathentry excluding="src/" including="nobuild/**.java|Build.java" kind="src"
     path="" />
   <!-- Libraries -->

@@ -22,6 +22,10 @@ class TestJtags {
 
     var tags = readAllLines(process.inputReader());
 
-    getSnapshot().assertEquals(tags);
+    try {
+      getSnapshot().assertEquals(tags);
+    } catch (AssertionError e) {
+      throw new ProcessException(process, e);
+    }
   }
 }
