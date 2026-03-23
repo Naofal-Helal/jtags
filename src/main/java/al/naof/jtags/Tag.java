@@ -1,4 +1,4 @@
-package xyz.naofal.jtags;
+package al.naof.jtags;
 
 import java.nio.file.Path;
 import java.util.Comparator;

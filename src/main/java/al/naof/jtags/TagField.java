@@ -1,4 +1,4 @@
-package xyz.naofal.jtags;
+package al.naof.jtags;
 
 public sealed interface TagField {
   public record StaticTag() implements TagField {}

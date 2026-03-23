@@ -1,4 +1,4 @@
-package xyz.naofal.jtags;
+package al.naof.jtags;
 
 public enum TagKind {
   PACKAGE,

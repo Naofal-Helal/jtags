@@ -1,6 +1,6 @@
-package xyz.naofal.jtags;
+package al.naof.jtags;
 
-import static xyz.naofal.jtags.JtagsLogger.logger;
+import static al.naof.jtags.JtagsLogger.logger;
 
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.util.JavacTask;
@@ -15,7 +15,7 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-import xyz.naofal.jtags.Jtags.Options;
+import al.naof.jtags.Jtags.Options;
 
 public class TagCollector {
 

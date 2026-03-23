@@ -1,9 +1,9 @@
-package xyz.naofal.jtags;
+package al.naof.jtags;
 
-import static xyz.naofal.jtags.JtagsLogger.logger;
-import static xyz.naofal.jtags.TagField.EnclosingType;
-import static xyz.naofal.jtags.TagField.Package;
-import static xyz.naofal.jtags.TagField.StaticTag;
+import static al.naof.jtags.JtagsLogger.logger;
+import static al.naof.jtags.TagField.EnclosingType;
+import static al.naof.jtags.TagField.Package;
+import static al.naof.jtags.TagField.StaticTag;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.file.Path;
 import java.util.AbstractQueue;
-import xyz.naofal.jtags.Jtags.Options;
+import al.naof.jtags.Jtags.Options;
 
 public record TagsWriter(Options options) {
   private static final int MAX_PATTERN_LENGTH = 96;

@@ -1,4 +1,4 @@
-package xyz.naofal.jtags;
+package al.naof.jtags;
 
 import java.util.HashMap;
 import java.util.Map;

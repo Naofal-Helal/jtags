@@ -38,7 +38,7 @@ public class Build {
       System.exit(1);
     }
 
-    String mainClass = "xyz.naofal.jtags.Jtags";
+    String mainClass = "al.naof.jtags.Jtags";
     String[] sourcePaths = glob("src/main/java/**.java");
     String[] classPaths = {};
 
@@ -91,7 +91,7 @@ public class Build {
   }
 
   static void clean() {
-    command("rm", "-rf", buildClassPath + "/xyz");
+    command("rm", "-rf", buildClassPath + "/al");
   }
 
   static void packageJar(String jarfile) {
@@ -99,7 +99,7 @@ public class Build {
     file.delete();
 
     command(
-        "jar", "cfe", jarfile, "xyz.naofal.jtags.Jtags", "-C", buildClassPath, "xyz/naofal/jtags");
+        "jar", "cfe", jarfile, "al.naof.jtags.Jtags", "-C", buildClassPath, "al/naof/jtags");
 
     // Make jar file executable by hashbang
     byte[] hashbang = "#!/usr/bin/env -S java -jar\n".getBytes();

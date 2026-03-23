@@ -1,6 +1,6 @@
-package xyz.naofal.jtags;
+package al.naof.jtags;
 
-import static xyz.naofal.jtags.JtagsLogger.logger;
+import static al.naof.jtags.JtagsLogger.logger;
 
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.PriorityBlockingQueue;
 import javax.lang.model.element.Modifier;
-import xyz.naofal.jtags.Jtags.Options;
+import al.naof.jtags.Jtags.Options;
 
 public class TreeVisitor extends TreePathScanner<Void, TreeVisitorContext> {
   public final Options options;

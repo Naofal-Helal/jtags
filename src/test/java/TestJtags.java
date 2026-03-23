@@ -4,7 +4,7 @@ import java.io.IOException;
 import notest.Test;
 
 class TestJtags {
-  public static final String Jtags = "xyz.naofal.jtags.Jtags";
+  public static final String Jtags = "al.naof.jtags.Jtags";
 
   public static void main(String[] args) {
     runTests(TestJtags.class, args);

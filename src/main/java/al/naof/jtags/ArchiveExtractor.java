@@ -1,6 +1,6 @@
-package xyz.naofal.jtags;
+package al.naof.jtags;
 
-import static xyz.naofal.jtags.JtagsLogger.logger;
+import static al.naof.jtags.JtagsLogger.logger;
 
 import java.io.FileInputStream;
 import java.io.IOException;
