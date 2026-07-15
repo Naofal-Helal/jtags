@@ -3,6 +3,8 @@ import static nobuild.NoBuild.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.List;
@@ -40,34 +42,32 @@ public class Build {
 
     String mainClass = "al.naof.jtags.Jtags";
     String[] sourcePaths = glob("src/main/java/**.java");
-    String[] classPaths = {};
 
     var subcommand = arguments.pop();
     switch (subcommand) {
       case "build":
-        buildJtags(mainClass, sourcePaths, classPaths);
+        buildJtags(mainClass, sourcePaths);
         break;
 
       case "run":
-        buildJtags(mainClass, sourcePaths, classPaths);
+        buildJtags(mainClass, sourcePaths);
 
         Map<Boolean, List<String>> argPartition =
             arguments.stream().collect(Collectors.partitioningBy(it -> it.startsWith("-D")));
-        runJava(
-            classPaths,
-            argPartition.get(true).toArray(String[]::new),
-            mainClass,
-            argPartition.get(false).toArray(String[]::new));
+
+        runJava()
+            .javaArguments(argPartition.get(true).toArray(String[]::new))
+            .run(mainClass, argPartition.get(false).toArray(String[]::new));
         break;
 
       case "package":
         clean();
-        buildJtags(mainClass, sourcePaths, classPaths);
+        buildJtags(mainClass, sourcePaths);
         packageJar(Optional.ofNullable(arguments.poll()).orElse("Jtags.jar"));
         break;
 
       case "test":
-        buildJtags(mainClass, sourcePaths, classPaths);
+        buildJtags(mainClass, sourcePaths);
         runTests(arguments.toArray(String[]::new));
         break;
 
@@ -79,13 +79,13 @@ public class Build {
     }
   }
 
-  static void buildJtags(String mainClass, String[] sourcePaths, String[] classPaths) {
+  static void buildJtags(String mainClass, String[] sourcePaths) {
     if (!classNeedsRebuild(mainClass, sourcePaths)) {
       return;
     }
 
     logger.info("Compiling %s...".formatted(program));
-    if (!compileJava(classPaths, sourcePaths)) {
+    if (!compileJava(sourcePaths)) {
       System.exit(1);
     }
   }
@@ -95,29 +95,20 @@ public class Build {
   }
 
   static void packageJar(String jarfile) {
-    File file = new File(jarfile);
-    file.delete();
-
-    command(
-        "jar", "cfe", jarfile, "al.naof.jtags.Jtags", "-C", buildClassPath, "al/naof/jtags");
+    String jarfileTmp = jarfile + ".tmp";
+    command("jar", "cfe", jarfileTmp, "al.naof.jtags.Jtags", "-C", buildClassPath, "al/naof/jtags");
 
     // Make jar file executable by hashbang
-    byte[] hashbang = "#!/usr/bin/env -S java -jar\n".getBytes();
-    int fileLength = (int) file.length();
-    int length = fileLength + hashbang.length;
-    byte[] bytes = new byte[length];
-    System.arraycopy(hashbang, 0, bytes, 0, hashbang.length);
-    try {
-      FileInputStream in = new FileInputStream(file);
-      in.read(bytes, hashbang.length, fileLength);
-      in.close();
-      FileOutputStream out = new FileOutputStream(file);
-      out.write(bytes);
-      out.close();
+    String hashbang = "#!/usr/bin/env -S java -jar\n";
+    try (FileInputStream in = new FileInputStream(jarfileTmp);
+        FileOutputStream out = new FileOutputStream(jarfile); ) {
+      out.write(hashbang.getBytes());
+      in.transferTo(out);
+      new File(jarfile).setExecutable(true);
+      Files.delete(Path.of(jarfileTmp));
     } catch (Exception ex) {
       logger.log(Level.SEVERE, "Problem during file IO with " + jarfile, ex);
     }
-    file.setExecutable(true);
   }
 
   static void runTests(String[] args) {
@@ -131,6 +122,6 @@ public class Build {
       }
     }
 
-    System.exit(runJava(new String[0], new String[] {"-enableassertions"}, mainClass, args));
+    System.exit(runJava().javaArguments("-enableassertions").run(mainClass, args));
   }
 }

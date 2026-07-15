@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -58,7 +59,7 @@ import javax.tools.ToolProvider;
 ///
 /// ```java
 /// // Build.java
-/// import static nobuild.Nobuild.*;
+/// import static nobuild.NoBuild.*;
 ///
 /// public class Build {
 ///   public static void main(String[] args) {
@@ -86,9 +87,8 @@ import javax.tools.ToolProvider;
 /// rebuild itself if `Build.java` is modified.
 ///
 /// @author Naofal Helal
-/// @version 0.2
+/// @version 1.0
 /// @since 23
-////
 public class NoBuild {
   public static Logger logger = Logger.getLogger("logger");
   public static Handler loggingHandler = new NoBuildLogHandler();
@@ -128,6 +128,7 @@ public class NoBuild {
                 logger.warning(
                     "Using %s as default classpath. Make sure to include with -cp %1$s"
                         .formatted(path));
+                javaClassPath = "build" + File.pathSeparator + javaClassPath;
               }
               return path;
             })
@@ -169,19 +170,20 @@ public class NoBuild {
         };
 
     @Override
-    public void publish(LogRecord record) {
-      if (record.getMessage() != null && !record.getMessage().isEmpty()) {
+    public void publish(LogRecord log) {
+      if (log.getMessage() != null && !log.getMessage().isEmpty()) {
         if (Optional.ofNullable(System.console()).map(it -> it.isTerminal()).orElse(false)) {
-          int color = colors.get(record.getLevel());
+          int color = colors.get(log.getLevel());
           System.err.printf(
               "\u001b[38;5;%dm[%s]\u001b[0m %s%n",
-              color, record.getLevel().getName(), record.getMessage());
+              color, log.getLevel().getName(), log.getMessage());
         } else {
-          System.err.printf("[%s] %s%n", record.getLevel().getName(), record.getMessage());
+          System.err.printf("[%s] %s%n", log.getLevel().getName(), log.getMessage());
         }
       }
-      if (record.getThrown() != null) {
-        System.err.println(record.getThrown().toString().indent(4));
+      if (log.getThrown() != null) {
+        if (log.getThrown().getMessage() != null) System.err.println(log.getThrown().getMessage());
+        log.getThrown().printStackTrace(System.err);
       }
     }
   }
@@ -211,132 +213,168 @@ public class NoBuild {
 
     logger.info("Recompiling %s...".formatted(buildSource));
 
-    if (!compileJava(buildClassPath, sourcePaths)) {
+    if (!compileJava(sourcePaths)) {
       logger.severe("Compilation failed");
       System.exit(1);
     }
 
-    int status = runJava(buildClass.getName(), args);
+    int status = runJava().run(buildClass.getName(), args);
     System.exit(status);
   }
 
   /// Runs a Java class.
-  ///
   /// @param mainClass The fully qualified class name, e.g. `com.example.MyClass$MySubClass`
-  /// @return Exit status code
-  public static int runJava(String mainClass) {
-    return runJava(mainClass, new String[0]);
-  }
-
-  /// Runs a Java class.
-  ///
-  /// @param mainClass The fully qualified class name, e.g. `com.example.MyClass$MySubClass`
-  /// @param args Arguments to pass to the main method
   /// @return Exit status code
   public static int runJava(String mainClass, String... args) {
-    return runJava(new String[0], mainClass, args);
+    return new RunJava().run(mainClass, args);
   }
 
-  /// Runs a Java class.
-  ///
-  /// @param additionalClassPaths Additional class paths to pass to the compiler
-  /// @param mainClass The fully qualified class name, e.g. `com.example.MyClass$MySubClass`
-  /// @param args Arguments to pass to the main method
-  /// @return Exit status code
-  public static int runJava(String[] additionalClassPaths, String mainClass, String... args) {
-    String pathSeparator = System.getProperty("path.separator");
-
-    String classPaths =
-        String.join(
-            pathSeparator,
-            Stream.concat(Stream.of(javaClassPath), Arrays.stream(additionalClassPaths))
-                .toArray(String[]::new));
-
-    Stream<String> commandLineStream =
-        Stream.concat(
-            Stream.of(javaBin.toString(), "-cp", classPaths, mainClass), Arrays.stream(args));
-
-    return command(commandLineStream.toArray(String[]::new));
+  /// Creates a new Java run task.
+  public static RunJava runJava() {
+    return new RunJava();
   }
 
-  /// Runs a Java class.
-  ///
-  /// @param additionalClassPaths Additional class paths to pass to the compiler
-  /// @param javaArguments Arguments to pass to the java binary
-  /// @param mainClass The fully qualified class name, e.g. `com.example.MyClass$MySubClass`
-  /// @param args Arguments to pass to the main method
-  /// @return Exit status code
-  public static int runJava(
-      String[] additionalClassPaths, String[] javaArguments, String mainClass, String... args) {
-    String pathSeparator = System.getProperty("path.separator");
+  /// Describes a command to compile java sources.
+  public static class RunJava {
+    public String[] classPath = {};
+    public String[] modulePath = {};
+    /// Arguments to pass to the java binary
+    public String[] javaArguments = {};
 
-    String classPaths =
-        String.join(
-            pathSeparator,
-            Stream.concat(Stream.of(javaClassPath), Arrays.stream(additionalClassPaths))
-                .toArray(String[]::new));
+    public RunJava classPath(String... classPath) {
+      this.classPath = classPath;
+      return this;
+    }
 
-    Stream<String> commandLineStream =
-        Stream.of(
-                Stream.of(javaBin.toString(), "-cp", classPaths),
-                Arrays.stream(javaArguments),
-                Stream.of(mainClass),
-                Arrays.stream(args))
-            .flatMap(it -> it);
+    public RunJava modulePath(String... modulePath) {
+      this.modulePath = modulePath;
+      return this;
+    }
 
-    return command(commandLineStream.toArray(String[]::new));
+    /// Arguments to pass to the java binary
+    public RunJava javaArguments(String... javaArguments) {
+      this.javaArguments = javaArguments;
+      return this;
+    }
+
+    /// Runs a Java class.
+    /// @param mainClass The fully qualified class name, e.g. `com.example.MyClass$MySubClass`
+    /// @return Exit status code
+    public int run(String mainClass, String... args) {
+      Objects.requireNonNull(mainClass, "main class is not provided");
+      String pathSeparator = System.getProperty("path.separator");
+
+      String classPaths =
+          String.join(
+              pathSeparator,
+              Stream.concat(Stream.of(javaClassPath), Arrays.stream(classPath))
+                  .toArray(String[]::new));
+
+      Stream<String> modulePaths =
+          modulePath.length > 0
+              ? Stream.of("-p", String.join(pathSeparator, modulePath))
+              : Stream.empty();
+
+      Stream<String> commandLineStream =
+          Stream.of(
+                  Stream.of(javaBin.toString(), "-cp", classPaths),
+                  modulePaths,
+                  Arrays.stream(javaArguments),
+                  Stream.of(mainClass),
+                  Arrays.stream(args))
+              .flatMap(it -> it);
+
+      return command(commandLineStream.toArray(String[]::new));
+    }
   }
 
   /// Compiles java sources.
   ///
   /// @return `true` if all the sources compiled successfully
   public static boolean compileJava(String... sourcePaths) {
-    return compileJava(new String[0], buildClassPath, sourcePaths);
+    return new CompileJava().compile(sourcePaths);
   }
 
-  /// Compiles java sources.
-  ///
-  /// @return `true` if all the sources compiled successfully
-  public static boolean compileJava(String[] additionalClassPaths, String... sourcePaths) {
-    return compileJava(additionalClassPaths, buildClassPath, sourcePaths);
+  /// Creates a new Java compilation task.
+  public static CompileJava compileJava() {
+    return new CompileJava();
   }
 
-  /// Compiles java sources.
-  ///
-  /// @return `true` if all the sources compiled successfully
-  public static boolean compileJava(String classOutputPath, String... sourcePaths) {
-    return compileJava(new String[0], classOutputPath, sourcePaths);
-  }
+  /// Describes a command to compile java sources.
+  public static class CompileJava {
+    public String[] classPath = {};
+    public String[] modulePath = {};
+    public String[] javacOptions = {};
+    public String classOutputPath = buildClassPath;
 
-  /// Compiles java sources.
-  ///
-  /// @return `true` if all the sources compiled successfully
-  public static boolean compileJava(
-      String[] additionalClassPaths, String classOutputPath, String... sourcePaths) {
-    try (StandardJavaFileManager fileManager =
-        compiler.getStandardFileManager(null, null, null); ) {
-
-      Iterable<? extends JavaFileObject> compilationUnits =
-          fileManager.getJavaFileObjects(sourcePaths);
-
-      List<String> compilerOptions = new ArrayList<>();
-      compilerOptions.add("-Xlint:all");
-      compilerOptions.add("-d");
-      compilerOptions.add(classOutputPath);
-
-      if (additionalClassPaths.length > 0) {
-        compilerOptions.add("-cp");
-        compilerOptions.add(String.join(File.pathSeparator, additionalClassPaths));
-      }
-
-      return compiler
-          .getTask(null, fileManager, null, compilerOptions, null, compilationUnits)
-          .call();
-
-    } catch (Exception ex) {
-      logger.log(Level.SEVERE, "Exception occurred while attempting to compile:", ex);
-      return false;
+    public CompileJava classPath(String... classPath) {
+      this.classPath = classPath;
+      return this;
     }
+
+    public CompileJava modulePath(String... modulePath) {
+      this.modulePath = modulePath;
+      return this;
+    }
+
+    public CompileJava javacOptions(String... javacOptions) {
+      this.javacOptions = javacOptions;
+      return this;
+    }
+
+    public CompileJava classOutputPath(String classOutputPath) {
+      this.classOutputPath = classOutputPath;
+      return this;
+    }
+
+    /// Compiles java sources.
+    ///
+    /// @return `true` if all the sources compiled successfully
+    public boolean compile(String... sourcePaths) {
+      Objects.requireNonNull(classOutputPath, "output path is not provided");
+      Objects.requireNonNull(sourcePaths, "source paths is not provided");
+      try (StandardJavaFileManager fileManager =
+          compiler.getStandardFileManager(null, null, null); ) {
+
+        Iterable<? extends JavaFileObject> compilationUnits =
+            fileManager.getJavaFileObjects(sourcePaths);
+
+        List<String> compilerOptions = new ArrayList<>();
+        compilerOptions.add("-d");
+        compilerOptions.add(classOutputPath);
+
+        if (classPath.length > 0) {
+          compilerOptions.add("-cp");
+          compilerOptions.add(String.join(File.pathSeparator, classPath));
+        }
+
+        if (modulePath.length > 0) {
+          compilerOptions.add("-p");
+          compilerOptions.add(String.join(File.pathSeparator, modulePath));
+        }
+
+        if (javacOptions.length > 0) {
+          compilerOptions.addAll(List.of(javacOptions));
+        }
+
+        logger.finest(() -> "Running javac with options: " + compilerOptions);
+
+        return compiler
+            .getTask(null, fileManager, null, compilerOptions, null, compilationUnits)
+            .call();
+
+      } catch (Exception ex) {
+        logger.log(Level.SEVERE, "Exception occurred while attempting to compile:", ex);
+        return false;
+      }
+    }
+  }
+
+  /// Runs a shell command.
+  ///
+  /// @return Exit status code
+  public static int command(List<String> command) {
+    return command(command.toArray(String[]::new));
   }
 
   /// Runs a shell command.
